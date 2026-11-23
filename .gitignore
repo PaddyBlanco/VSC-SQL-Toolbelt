@@ -19,3 +19,7 @@
 !/src/objektskripte/*.ts
 !/test/
 !/test/*.test.cjs
+!/assets/
+!/assets/script-table-as.png
+!/assets/select-tab.gif
+!/assets/insert-tab.gif
