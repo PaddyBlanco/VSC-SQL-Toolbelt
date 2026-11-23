@@ -1,6 +1,8 @@
 # SQL-Toolbelt für VS Code
 
-Spaltennamen abtippen? Setz den Cursor hinter das Sternchen und drück <kbd>Tab</kbd>. SQL-Toolbelt ergänzt Microsofts MSSQL-Erweiterung um SQL-Vorlagen direkt im Editor und das aus SSMS vertraute Tabellenmenü **Script Table as**.
+**Mit einem Druck auf <kbd>Tab</kbd> wird aus `SELECT *` eine explizite Spaltenliste und aus `INSERT INTO` eine Vorlage mit passenden Testwerten.** Die Spalten und Datentypen kommen direkt aus deiner MSSQL-Datenbank.
+
+**Per Rechtsklick stehen sieben Skriptvarianten wie in SSMS bereit.** Erzeuge `DROP` und `CREATE` zusammen in einem Skript oder ein `UPDATE`, das jede Primärschlüsselspalte im `WHERE` berücksichtigt.
 
 ## Vom Rechtsklick zum Tabellenskript
 

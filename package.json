@@ -1,7 +1,7 @@
 {
   "name": "sql-toolbelt",
   "displayName": "SQL Developer Toolkit",
-  "description": "SSMS-Scripting für Objekte einer ausdrücklich gewählten MSSQL-Datenbank.",
+  "description": "SELECT * per Tab in Spalten auflösen, INSERT INTO samt VALUES ergänzen und per Rechtsklick aus sieben Tabellenskripten wie in SSMS wählen.",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
