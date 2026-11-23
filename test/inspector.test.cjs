@@ -60,6 +60,29 @@ test("geänderte Objekt-ID oder Datenbank verhindert das Laden des Tabs", async 
     }
 });
 
+test("Keys / Indexes gruppiert Indexspalten und zusammengesetzte Fremdschlüssel in Katalogreihenfolge", async () => {
+    const rows = [
+        ["FOREIGN KEY", "BuchKey", "[Teil]", "", "[dbo].[Werk].[Teil]"],
+        ["FOREIGN KEY", "BuchKey", "[Band]", "", "[dbo].[Werk].[Band]"],
+        ["NONCLUSTERED", "BuchKey", "[Band] DESC", "", ""],
+        ["NONCLUSTERED", "BuchKey", "[Teil] ASC", "", ""],
+        ["NONCLUSTERED", "BuchKey", "", "[Titel, kurz]", ""],
+        ["NONCLUSTERED", "BuchKey", "", "[Text]", ""],
+        ["PRIMARY KEY", "PK_Buch", "[Id] ASC", "", ""]
+    ];
+    const api = { executeSimpleQuery: async (_, __, sql) => ({
+        rows: (sql.startsWith("DECLARE") ? rows : [["Demo", "81", "dbo", "Buch", "Table"]])
+            .map(row => row.map(displayValue => ({ displayValue })))
+    }) };
+    const result = await detailRows(api, "", "", { profile: "Test", name: "Demo" },
+        { id: 81, schema: "dbo", name: "Buch", type: "Table" }, "indexes");
+    assert.deepEqual(result, [
+        ["FOREIGN KEY", "BuchKey", "[Teil], [Band]", "—", "[dbo].[Werk].[Teil], [dbo].[Werk].[Band]"],
+        ["NONCLUSTERED", "BuchKey", "[Band] DESC, [Teil] ASC", "[Titel, kurz], [Text]", "—"],
+        ["PRIMARY KEY", "PK_Buch", "[Id] ASC", "—", "—"]
+    ]);
+});
+
 test("Webview hat eine frische CSP und behandelt Katalogwerte ausschließlich als Text", () => {
     const page = inspectorPage();
     assert.match(page, /default-src 'none'/);

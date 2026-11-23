@@ -37,20 +37,38 @@ const dependencies = `SELECT DISTINCT direction, kind COLLATE DATABASE_DEFAULT A
  (N'Eingehend',fk.referenced_object_id,fk.parent_object_id)) x(direction,source_id,target_id) WHERE x.source_id=@id
 ) refs ORDER BY direction,kind,target`;
 
-const indexes = `SELECT typ COLLATE DATABASE_DEFAULT AS typ, name, spalte, rolle COLLATE DATABASE_DEFAULT AS rolle, ziel FROM (
+const indexes = `SELECT typ COLLATE DATABASE_DEFAULT AS typ, name,
+ COALESCE(key_column,N''), COALESCE(included_column,N''), COALESCE(ziel,N'') FROM (
  SELECT CASE WHEN i.is_primary_key=1 THEN N'PRIMARY KEY' WHEN i.is_unique_constraint=1 THEN N'UNIQUE Constraint'
  ELSE CONCAT(CASE WHEN i.is_unique=1 THEN N'UNIQUE ' END,i.type_desc) END AS typ,
  CASE WHEN kc.name IS NOT NULL AND kc.name<>i.name THEN kc.name+N' / '+i.name ELSE i.name END AS name,
- COL_NAME(i.object_id,ic.column_id) AS spalte,
- CASE WHEN ic.is_included_column=1 THEN N'INCLUDE' WHEN ic.key_ordinal>0 THEN CONCAT(ic.key_ordinal,CASE WHEN ic.is_descending_key=1 THEN N' DESC' ELSE N' ASC' END) ELSE i.type_desc END AS rolle,
+ CASE WHEN ic.is_included_column=0 THEN QUOTENAME(COL_NAME(i.object_id,ic.column_id))+
+ CASE WHEN ic.key_ordinal=0 OR i.type NOT IN (1,2) THEN N'' WHEN ic.is_descending_key=1 THEN N' DESC' ELSE N' ASC' END END AS key_column,
+ CASE WHEN ic.is_included_column=1 THEN QUOTENAME(COL_NAME(i.object_id,ic.column_id)) END AS included_column,
  CAST(NULL AS nvarchar(800)) AS ziel, ic.is_included_column AS included, ic.key_ordinal AS ordinal, ic.index_column_id AS pos
  FROM sys.indexes i LEFT JOIN sys.index_columns ic ON ic.object_id=i.object_id AND ic.index_id=i.index_id
  LEFT JOIN sys.key_constraints kc ON kc.parent_object_id=i.object_id AND kc.unique_index_id=i.index_id
  WHERE i.object_id=@id AND i.index_id>0 AND i.is_hypothetical=0
- UNION ALL SELECT N'FOREIGN KEY',fk.name,COL_NAME(fc.parent_object_id,fc.parent_column_id),CONVERT(nvarchar(10),fc.constraint_column_id),
+ UNION ALL SELECT N'FOREIGN KEY',fk.name,QUOTENAME(COL_NAME(fc.parent_object_id,fc.parent_column_id)),NULL,
  QUOTENAME(OBJECT_SCHEMA_NAME(fc.referenced_object_id))+N'.'+QUOTENAME(OBJECT_NAME(fc.referenced_object_id))+N'.'+QUOTENAME(COL_NAME(fc.referenced_object_id,fc.referenced_column_id)),
  0,fc.constraint_column_id,fc.constraint_column_id FROM sys.foreign_keys fk JOIN sys.foreign_key_columns fc ON fc.constraint_object_id=fk.object_id WHERE fk.parent_object_id=@id
 ) entries ORDER BY name,typ,included,ordinal,pos`;
+
+function groupIndexes(rows: string[][]) {
+    const groups: { type: string; name: string; keys: string[]; includes: string[]; targets: string[] }[] = [];
+    for (const [type, name, key, included, target] of rows) {
+        let group = groups.at(-1);
+        if (!group || group.type !== type || group.name !== name) {
+            group = { type, name, keys: [], includes: [], targets: [] };
+            groups.push(group);
+        }
+        if (key) group.keys.push(key);
+        if (included) group.includes.push(included);
+        if (target) group.targets.push(target);
+    }
+    return groups.map(({ type, name, keys, includes, targets }) =>
+        [type, name, keys.join(", ") || "—", includes.join(", ") || "—", targets.join(", ") || "—"]);
+}
 
 export const tabs = ["dependencies", "create", "indexes", "properties"] as const;
 export type Tab = typeof tabs[number];
@@ -61,7 +79,8 @@ export async function detailRows(api: SharedConnections, token: string, uri: str
         throw new ToolkitError("Objekt hat sich geändert. Details erneut öffnen.");
     }
     const statements = { properties, dependencies, indexes };
-    return catalogRows(api, token, uri, `DECLARE @id int=OBJECT_ID(${objectNameValue(object)});
+    const rows = await catalogRows(api, token, uri, `DECLARE @id int=OBJECT_ID(${objectNameValue(object)});
 IF @id IS NULL OR @id<>${sqlId(object.id)} THROW 50000, 'Object changed', 1;
 ${statements[tab]}`);
+    return tab === "indexes" ? groupIndexes(rows) : rows;
 }

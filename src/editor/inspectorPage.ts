@@ -26,7 +26,7 @@ const vscode=acquireVsCodeApi();
 const byId=id=>document.getElementById(id);
 const buttons=Array.from(document.querySelectorAll('[role=tab]'));
 const result=byId('result'), open=byId('open');
-const headings={dependencies:['Richtung','Art','Objekt'],indexes:['Typ','Name','Spalte','Reihenfolge / Rolle','Ziel'],properties:['Eigenschaft','Wert']};
+const headings={dependencies:['Richtung','Art','Objekt'],indexes:['Typ','Name','Index key columns','Included columns','Ziel'],properties:['Eigenschaft','Wert']};
 let tab,request=0;
 function select(button){
  tab=button.id;

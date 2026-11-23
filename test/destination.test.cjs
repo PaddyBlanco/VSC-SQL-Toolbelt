@@ -2,7 +2,16 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const Module = require("node:module");
 
-test("Query-Editor erhält SQL erst bei bestätigtem Profil, Datenbank und unverändertem Ziel", async t => {
+function event() {
+    const listeners = new Set();
+    return {
+        subscribe(fn) { listeners.add(fn); return { dispose() { listeners.delete(fn); } }; },
+        fire(value) { for (const fn of listeners) fn(value); },
+        get size() { return listeners.size; }
+    };
+}
+
+test("Query-Editor befüllen, sobald MSSQL Profil und Datenbank bestätigt", async t => {
     const mock = {};
     const load = Module._load;
     let deliver;
@@ -13,38 +22,56 @@ test("Query-Editor erhält SQL erst bei bestätigtem Profil, Datenbank und unver
         ({ deliver } = require("../out/objektskripte/destination"));
     } finally { Module._load = load; }
 
-    for (const scenario of ["Quelle", "anderes Profil", "andere Datenbank", "abgebrochen", "Editor gewechselt", "Editor bearbeitet", "explizit verbunden", "Explorer"]) {
+    const db = { profile: "Demo-A", name: "Demo" };
+    const sql = "USE [Demo];\nGO\nCREATE TABLE dbo.Buch (Id int);";
+    for (const scenario of ["sofort", "Explorer", "verzögert", "anderes Profil", "andere Datenbank", "Profilwechsel während Prüfung",
+        "Editor gewechselt", "Editor bearbeitet", "Editor geschlossen", "abgebrochen"]) {
         await t.test(scenario, async () => {
-            const db = { profile: "Demo-A", name: "Demo" };
+            const [connection, focus, edit, close, cancel] = Array.from({ length: 5 }, event);
             const previous = { document: { getText: () => "SELECT 1" } };
-            let inserted;
-            let profile = ["Quelle", "Explorer", "andere Datenbank"].includes(scenario) ? db.profile : "Demo-B";
-            const api = { getActiveEditorConnectionId: async () => profile,
-                getActiveDatabase: async () => scenario === "andere Datenbank" ? "Andere" : db.name,
-                onDidChangeActiveEditorConnection: () => ({ dispose() {} }) };
             const doc = { isUntitled: true, languageId: "sql", version: 1, getText: () => "" };
-            const target = { document: doc, edit: async cb => { cb({ insert: (_, sql) => { inserted = sql; } }); return true; } };
+            const inserts = [];
+            const target = { document: doc, edit: async cb => { cb({ insert: (_, value) => inserts.push(value) }); return true; } };
+            const cancellation = { isCancellationRequested: false, onCancellationRequested: cancel.subscribe };
+            let profile = ["sofort", "Explorer", "andere Datenbank", "Profilwechsel während Prüfung"].includes(scenario) ? db.profile : undefined;
+            let name = scenario === "andere Datenbank" ? "Andere" : db.name;
+            if (scenario === "anderes Profil") profile = "Demo-B";
+            let race = scenario === "Profilwechsel während Prüfung";
+            const api = { getActiveEditorConnectionId: async () => {
+                const sampled = profile;
+                if (race) { race = false; profile = "Demo-B"; connection.fire(); }
+                return sampled;
+            }, getActiveDatabase: async () => name, onDidChangeActiveEditorConnection: connection.subscribe };
             mock.extensions = { getExtension: () => ({ activate: async () => ({ getSharedConnectionsApi: () => api }) }) };
             mock.authentication = { getSession: async () => ({ accessToken: "fixture" }) };
             mock.Position = class {};
-            mock.workspace = { textDocuments: [previous.document], openTextDocument: async options => {
-                assert.deepEqual(options, { language: "sql" }); return doc;
-            } };
-            mock.window = { activeTextEditor: previous, showTextDocument: async () => (mock.window.activeTextEditor = target),
-                onDidChangeActiveTextEditor: () => ({ dispose() {} }), showInformationMessage: async (_, check) => {
-                    if (scenario === "Editor gewechselt") mock.window.activeTextEditor = previous;
-                    if (scenario === "Editor bearbeitet") doc.version++;
-                    if (scenario === "explizit verbunden") profile = db.profile;
-                    return scenario === "abgebrochen" ? undefined : check;
+            mock.ProgressLocation = { Notification: 15 };
+            mock.workspace = { textDocuments: [previous.document], onDidChangeTextDocument: edit.subscribe,
+                onDidCloseTextDocument: close.subscribe, openTextDocument: async options => {
+                    assert.deepEqual(options, { language: "sql" }); return doc;
                 } };
+            mock.window = { activeTextEditor: previous, showTextDocument: async () => (mock.window.activeTextEditor = target),
+                onDidChangeActiveTextEditor: focus.subscribe, withProgress: (_, fn) => fn({}, cancellation) };
             const node = scenario === "Explorer" ? {} : undefined;
             mock.commands = { executeCommand: async (command, arg) => {
                 assert.equal(command, "mssql.objectExplorerNewQuery"); assert.equal(arg, node); mock.window.activeTextEditor = target;
             } };
-            const send = deliver("editor", "SELECT 2", db, "Beispiel", node);
-            if (["anderes Profil", "andere Datenbank", "Editor gewechselt", "Editor bearbeitet"].includes(scenario)) await assert.rejects(send);
+            const send = deliver("editor", sql, db, "Beispiel", node);
+            await new Promise(resolve => setImmediate(resolve));
+            if (!["sofort", "Explorer"].includes(scenario)) {
+                assert.deepEqual(inserts, []);
+                switch (scenario) {
+                    case "Editor gewechselt": mock.window.activeTextEditor = previous; focus.fire(previous); break;
+                    case "Editor bearbeitet": doc.version++; edit.fire({ document: doc }); break;
+                    case "Editor geschlossen": doc.isClosed = true; close.fire(doc); break;
+                    case "abgebrochen": cancellation.isCancellationRequested = true; cancel.fire(); break;
+                    default: profile = db.profile; name = db.name; connection.fire();
+                }
+            }
+            if (scenario.startsWith("Editor ")) await assert.rejects(send);
             else await send;
-            assert.equal(inserted, ["Quelle", "explizit verbunden", "Explorer"].includes(scenario) ? "SELECT 2" : undefined);
+            assert.deepEqual(inserts, scenario.startsWith("Editor ") || scenario === "abgebrochen" ? [] : [sql]);
+            for (const source of [connection, focus, edit, close, cancel]) assert.equal(source.size, 0);
         });
     }
 });

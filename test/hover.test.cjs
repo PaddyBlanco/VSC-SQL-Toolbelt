@@ -74,6 +74,22 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
     assert.match(messages.at(-1).sql, /CREATE TABLE/);
     assert.match(messages.at(-1).sql, /^USE \[Archiv\]/);
     assert.equal(tabs.length, 3);
+    const preview = messages.at(-1).sql;
+    const inserted = [];
+    const target = { document: { isUntitled: true, version: 1, languageId: "sql", getText: () => "" },
+        edit: async fn => { fn({ insert: (_, text) => inserted.push(text) }); return true; } };
+    vscode.extensions = { getExtension: () => ({ activate: async () => ({ getSharedConnectionsApi: () => api }) }) };
+    vscode.workspace = { textDocuments: [document], onDidChangeTextDocument: event, onDidCloseTextDocument: event,
+        openTextDocument: async () => target.document };
+    vscode.Position = class {};
+    vscode.ProgressLocation = { Notification: 15 };
+    vscode.window.showTextDocument = async () => (vscode.window.activeTextEditor = target);
+    vscode.window.withProgress = (_, fn) => fn({}, { isCancellationRequested: false, onCancellationRequested: event });
+    api.getActiveDatabase = async () => "Archiv";
+    await receive({ action: "open", tab: "create", request: 3 });
+    assert.deepEqual(inserted, []);
+    await receive({ action: "open", tab: "create", request: 4, sql: "Text aus der Webview ignorieren" });
+    assert.deepEqual(inserted, [preview]);
     await receive({ action: "load", tab: "other", request: 10 });
     assert.equal(messages.length, 4);
     bind();

@@ -37,28 +37,45 @@ export async function deliver(destination: Destination, sql: string, database: D
     }
     const target = editor;
     const version = target.document.version;
-    function emptyTarget() {
-        return vscode.window.activeTextEditor === target && target.document.version === version && !target.document.getText();
-    }
-    async function verified() {
-        if (!emptyTarget()) return false;
-        let changed = false;
-        const events = [api.onDidChangeActiveEditorConnection(() => { changed = true; }),
-            vscode.window.onDidChangeActiveTextEditor(() => { changed = true; })];
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification, cancellable: true,
+        title: "Warte auf MSSQL. Bei Bedarf im neuen Editor das ursprüngliche Profil und die Zieldatenbank auswählen."
+    }, async (_, cancel) => {
+        let revision = 0;
+        let wake = () => {};
+        const changed = () => { revision++; wake(); };
+        const events = [
+            api.onDidChangeActiveEditorConnection(changed), vscode.window.onDidChangeActiveTextEditor(changed),
+            vscode.workspace.onDidChangeTextDocument(e => { if (e.document === target.document) changed(); }),
+            vscode.workspace.onDidCloseTextDocument(doc => { if (doc === target.document) changed(); }),
+            cancel.onCancellationRequested(changed)
+        ];
         try {
-            const [profile, name] = await Promise.all([api.getActiveEditorConnectionId(token), api.getActiveDatabase(token)]);
-            return !changed && emptyTarget() && profile === database.profile && name === database.name;
+            while (!cancel.isCancellationRequested) {
+                const attempt = revision;
+                const active = vscode.window.activeTextEditor;
+                if (target.document.isClosed || target.document.version !== version || target.document.getText() || (active && active !== target)) {
+                    throw new ToolkitError("Der neue SQL-Editor wurde geschlossen, gewechselt oder bearbeitet.");
+                }
+                if (active === target) {
+                    let connection;
+                    try {
+                        connection = await Promise.all([api.getActiveEditorConnectionId(token), api.getActiveDatabase(token)]);
+                    } catch (error) {
+                        if (revision !== attempt) continue;
+                        throw error;
+                    }
+                    if (revision !== attempt) continue;
+                    if (connection[0] === database.profile && connection[1] === database.name) {
+                        if (!await target.edit(builder => builder.insert(new vscode.Position(0, 0), sql))) {
+                            throw new ToolkitError("Das Skript konnte nicht in den geprüften SQL-Editor eingefügt werden.");
+                        }
+                        return;
+                    }
+                }
+                // MSSQL may connect an untitled document after VS Code has already shown it.
+                await new Promise<void>(resolve => { wake = resolve; });
+            }
         } finally { events.forEach(event => event.dispose()); }
-    }
-    if (!await verified()) {
-        if (!emptyTarget()) throw new ToolkitError("Der neue SQL-Editor wurde gewechselt oder bearbeitet.");
-        const check = "Verbindung prüfen und einfügen";
-        const answer = await vscode.window.showInformationMessage(
-            "Im neuen, leeren SQL-Editor über MSSQL mit dem ursprünglichen Profil und der Datenbank " + database.name + " verbinden.", check);
-        if (answer !== check) return;
-        if (!await verified()) throw new ToolkitError("Profil, Datenbank oder SQL-Editor stimmen nicht mit dem Skriptziel überein.");
-    }
-    if (!emptyTarget() || !await target.edit(builder => builder.insert(new vscode.Position(0, 0), sql))) {
-        throw new ToolkitError("Das Skript konnte nicht in den geprüften SQL-Editor eingefügt werden.");
-    }
+    });
 }

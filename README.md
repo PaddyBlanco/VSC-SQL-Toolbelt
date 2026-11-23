@@ -56,10 +56,10 @@ Zeige im verbundenen SQL-Editor zum Beispiel auf `dbo.Buch` in `SELECT * FROM db
 | --- | --- |
 | Dependencies | Statische ein- und ausgehende Referenzen sowie Fremdschlüssel, soweit deine Berechtigungen sie sichtbar machen |
 | Create | Die MSSQL-Definition. Doppelklick oder **Im SQL-Editor öffnen** übernimmt sie in ein neues Abfragefenster |
-| Keys / Indexes | Namen, Schlüsselspalten in Reihenfolge, Sortierung, INCLUDE-Spalten und Fremdschlüsselziele |
+| Keys / Indexes | Eine Zeile je Index. **Index key columns** zeigt die Schlüsselspalten in Reihenfolge mit ASC/DESC, **Included columns** die zusätzlichen Spalten. Bei Fremdschlüsseln erscheint das Ziel. |
 | Properties | Name, Typ, Schema, Beschreibung, Datenbank und Server. Bei Tabellen auch Identity-Spalte, Indexierbarkeit, Lock Escalation und Datenspeicher |
 
-Das neue Abfragefenster erhält SQL erst, wenn MSSQL das ursprüngliche Verbindungsprofil und die Datenbank bestätigt. Falls VS Code einen leeren Editor öffnet, verbinde ihn über MSSQL und wähle **Verbindung prüfen und einfügen**.
+Das CREATE-Skript erscheint automatisch im neuen Editor, sobald MSSQL das ursprüngliche Profil und die Zieldatenbank meldet. Das gilt auch bei verzögertem Verbindungsaufbau. Ist die automatische Verbindung deaktiviert oder eine andere Verbindung aktiv, wähle im neuen SQL-Editor über MSSQL das ursprüngliche Profil und die Zieldatenbank.
 
 ## Aus dem Quellcode entwickeln
 
