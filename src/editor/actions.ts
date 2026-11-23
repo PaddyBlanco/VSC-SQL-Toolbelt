@@ -1,12 +1,11 @@
 ﻿import * as vscode from "vscode";
-import { ToolkitError, type Database, type SharedConnections } from "../mssql/connection";
+import { ToolkitError, type EditorBinding } from "../mssql/connection";
 import { report } from "../mssql/session";
 import { Metadata } from "./metadata";
 import { prepare, stillCurrent, type Prepared } from "./prepare";
 
 export function registerEditor(context: vscode.ExtensionContext) {
     let metadata: Metadata | undefined;
-    let connectionListener: { dispose(): void } | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let revision = 0;
     let ready: Prepared | undefined;
@@ -74,21 +73,10 @@ export function registerEditor(context: vscode.ExtensionContext) {
         vscode.window.onDidChangeActiveTextEditor(schedule),
         vscode.window.onDidChangeTextEditorSelection(e => { if (e.textEditor === vscode.window.activeTextEditor) schedule(); }),
         vscode.workspace.onDidChangeTextDocument(e => { if (e.document === vscode.window.activeTextEditor?.document) schedule(); }),
-        vscode.authentication.onDidChangeSessions(e => {
-            if (metadata && e.provider.id === metadata.api.authenticationProviderId) {
-                metadata = new Metadata(metadata.api, metadata.db);
-                schedule();
-            }
-        }),
-        { dispose() { clearTimeout(timer); connectionListener?.dispose(); } }
+        { dispose() { clearTimeout(timer); } }
     );
-    return (db: Database, api: SharedConnections) => {
-        connectionListener?.dispose();
-        metadata = new Metadata(api, db);
-        connectionListener = api.onDidChangeActiveEditorConnection(() => {
-            metadata = new Metadata(api, db);
-            schedule();
-        });
+    return (binding?: EditorBinding) => {
+        metadata = binding && new Metadata(binding.api, binding.db);
         schedule();
     };
 }

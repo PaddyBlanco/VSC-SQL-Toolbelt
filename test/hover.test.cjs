@@ -11,7 +11,7 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
     const event = () => ({ dispose() {} });
     const messages = [];
     const tabs = [];
-    let hover, command, receive, disposed;
+    let hover, command, receive, disposed, sessionChanged;
     const panel = { webview: { onDidReceiveMessage: fn => { receive = fn; return event(); },
         postMessage: async m => { messages.push(m); return true; } },
         onDidDispose: event, dispose: () => { disposed = true; } };
@@ -33,7 +33,7 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
                 assert.equal(title, "dbo.Buch"); assert.deepEqual(options.localResourceRoots, []);
                 panels++; return panel;
             } },
-        authentication: { onDidChangeSessions: event, getSession: async () => ({ accessToken: "fixture" }) },
+        authentication: { onDidChangeSessions: fn => { sessionChanged = fn; return event(); }, getSession: async () => ({ accessToken: "fixture" }) },
         languages: { registerHoverProvider: (_selector, fn) => { hover = fn.provideHover; return event(); } },
         commands: { registerCommand: (_name, fn) => { command = fn; return event(); } },
         Hover: class { constructor(contents) { this.contents = contents; } },
@@ -46,7 +46,7 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
         ({ registerInspector } = require("../out/editor/inspector"));
     } finally { Module._load = original; }
     const bind = registerInspector({ subscriptions: [] });
-    bind(db, api);
+    bind({ db, api });
     const get = async () => {
         const h = await hover(document, sql.indexOf("Buch"), { isCancellationRequested: false });
         const link = h.contents[1];
@@ -74,6 +74,8 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
     assert.equal(tabs.length, 3);
     await receive({ action: "load", tab: "other", request: 10 });
     assert.equal(messages.length, 4);
-    bind({ ...db }, api);
+    bind();
+    assert.ok(!disposed);
+    sessionChanged({ provider: { id: api.authenticationProviderId } });
     assert.ok(disposed);
 });

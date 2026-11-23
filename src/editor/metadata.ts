@@ -4,7 +4,7 @@ import { ToolkitError, withConnection, type Database, type SharedConnections } f
 
 type Cache<T> = Map<string, { until: number; result: Promise<T> }>;
 
-// One instance per explicit binding. Share identical in-flight requests and discard failed loads.
+// One cache per editor connection. Share identical in-flight requests and discard failed loads.
 export class Metadata {
     private readonly relations: Cache<Relation> = new Map();
     private readonly procedures: Cache<Parameter[]> = new Map();
@@ -26,7 +26,7 @@ export class Metadata {
             this.api.getActiveEditorConnectionId(token), this.api.getActiveDatabase(token)
         ]);
         if (profile !== this.db.profile || database !== this.db.name) {
-            throw new ToolkitError("Zuerst die Datenbank dieses SQL-Editors übernehmen.");
+            throw new ToolkitError("Die Verbindung des SQL-Editors hat sich geändert. Bitte erneut ergänzen.");
         }
         const keys = sources.map(s => JSON.stringify([s.schema, s.name]));
         const hits = new Map<string, Promise<T>>();

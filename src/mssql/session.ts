@@ -2,13 +2,17 @@ import * as vscode from "vscode";
 import { ToolkitError } from "./connection";
 import type { SharedConnections } from "./connection";
 
-export async function session() {
+export async function sharedConnections() {
     const extension = vscode.extensions.getExtension<{
         getSharedConnectionsApi(version: 1): SharedConnections;
     }>("ms-mssql.mssql");
     const exports = await extension?.activate();
     if (!exports?.getSharedConnectionsApi) throw new ToolkitError("MSSQL mit Shared Connections v1 wird benötigt.");
-    const api = exports.getSharedConnectionsApi(1);
+    return exports.getSharedConnectionsApi(1);
+}
+
+export async function session() {
+    const api = await sharedConnections();
     const { accessToken } = await vscode.authentication.getSession(api.authenticationProviderId, [], { createIfNone: true });
     return { api, token: accessToken };
 }

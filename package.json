@@ -2,7 +2,7 @@
   "name": "sql-toolbelt",
   "displayName": "SQL Developer Toolkit",
   "description": "SELECT *, INSERT und EXEC per Tab ergänzen, SQL-Objekte per Hover mit CREATE und Indizes erkunden und sieben Tabellenskripte per Rechtsklick erzeugen.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "license": "MIT",
   "repository": { "type": "git", "url": "https://github.com/PaddyBlanco/VSC-SQL-Toolbelt.git" },
@@ -14,6 +14,7 @@
   "extensionKind": ["workspace"],
   "capabilities": { "untrustedWorkspaces": { "supported": false } },
   "extensionDependencies": ["ms-mssql.mssql"],
+  "activationEvents": ["onLanguage:sql"],
   "main": "./out/extension.js",
   "contributes": {
     "views": {
@@ -21,7 +22,7 @@
     },
     "viewsWelcome": [{
       "view": "sqlToolbelt.objects",
-      "contents": "Öffne einen verbundenen SQL-Editor.\n[Datenbank übernehmen](command:sqlToolbelt.bind)"
+      "contents": "Öffne einen SQL-Editor und verbinde ihn über MSSQL.\n[MSSQL-Zugriff erneut anfordern](command:sqlToolbelt.bind)"
     }],
     "commands": [
       { "command": "sqlToolbelt.bind", "title": "Datenbank aus SQL-Editor übernehmen", "category": "SQL Developer Toolkit" },

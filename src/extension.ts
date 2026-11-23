@@ -11,7 +11,7 @@ import { deliver } from "./objektskripte/destination";
 export function activate(context: vscode.ExtensionContext) {
     const bindEditor = registerEditor(context);
     const bindInspector = registerInspector(context);
-    const isCurrent = registerObjectView(context, (db, api) => { bindEditor(db, api); bindInspector(db, api); });
+    const isCurrent = registerObjectView(context, binding => { bindEditor(binding); bindInspector(binding); });
     registerTableMenu(context);
     async function output(operation: "script" | "insert" | "update", entry?: Entry) {
         if (!entry || entry.kind !== "object") return;

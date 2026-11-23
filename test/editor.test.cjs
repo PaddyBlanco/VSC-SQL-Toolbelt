@@ -127,7 +127,7 @@ test("EXEC übernimmt die Signatur vom gebundenen Katalog und gibt nur OUTPUT-Pa
         "\tSELECT @Total AS [Total],", "\t\t@Note AS [Note];", "SELECT 1;"
     ].join("\r\n"));
     api.getActiveDatabase = async () => "Andere";
-    await assert.rejects(metadata.parameters("token", match.source), /Datenbank dieses SQL-Editors/);
+    await assert.rejects(metadata.parameters("token", match.source), /Verbindung des SQL-Editors/);
 });
 
 test("EXECUTE ohne Ausgabeparameter erzeugt Deklaration und Aufruf", () => {

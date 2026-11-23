@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import type { CatalogObject } from "../mssql/catalog";
-import { withConnection, type Database, type SharedConnections } from "../mssql/connection";
+import { withConnection, type Database, type EditorBinding, type SharedConnections } from "../mssql/connection";
 import { detailRows, resolveObject, tabs, type Tab } from "../mssql/details";
 import { report } from "../mssql/session";
 import { ddlScript } from "../objektskripte/script";
@@ -46,9 +46,9 @@ function showDetails(db: Database, api: SharedConnections, object: CatalogObject
 }
 
 export function registerInspector(context: vscode.ExtensionContext) {
-    let binding: { db: Database; api: SharedConnections } | undefined;
+    let binding: EditorBinding | undefined;
     let revision = 0;
-    let listener: vscode.Disposable | undefined;
+    let panelProvider: string | undefined;
     let panel: vscode.WebviewPanel | undefined;
     let ticket: { key: string; open: () => Promise<void> } | undefined;
     const command = "sqlToolbelt.showDetails";
@@ -56,7 +56,7 @@ export function registerInspector(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(invalidate),
         vscode.authentication.onDidChangeSessions(e => {
-            if (e.provider.id === binding?.api.authenticationProviderId) { invalidate(); panel?.dispose(); }
+            if (e.provider.id === panelProvider) panel?.dispose();
         }),
         vscode.commands.registerCommand(command, async key => {
             if (ticket && key === ticket.key) {
@@ -93,7 +93,8 @@ export function registerInspector(context: vscode.ExtensionContext) {
                         panel?.dispose();
                         const next = showDetails(db, api, object);
                         panel = next;
-                        next.onDidDispose(() => { if (panel === next) panel = undefined; });
+                        panelProvider = api.authenticationProviderId;
+                        next.onDidDispose(() => { if (panel === next) { panel = undefined; panelProvider = undefined; } });
                     } };
                     const link = new vscode.MarkdownString("[Details öffnen](command:" + command + "?" + encodeURIComponent(JSON.stringify([key])) + ")");
                     link.isTrusted = { enabledCommands: [command] };
@@ -101,13 +102,10 @@ export function registerInspector(context: vscode.ExtensionContext) {
                         new vscode.Range(document.positionAt(target.start), document.positionAt(target.end)));
                 } catch { return; }
             }
-        }), { dispose() { invalidate(); listener?.dispose(); panel?.dispose(); } }
+        }), { dispose() { invalidate(); panel?.dispose(); } }
     );
-    return (db: Database, api: SharedConnections) => {
+    return (next?: EditorBinding) => {
         invalidate();
-        panel?.dispose();
-        listener?.dispose();
-        binding = { db, api };
-        listener = api.onDidChangeActiveEditorConnection(invalidate);
+        binding = next;
     };
 }

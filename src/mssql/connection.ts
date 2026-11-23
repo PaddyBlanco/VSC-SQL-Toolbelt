@@ -21,6 +21,11 @@ export interface Database {
     name: string;
 }
 
+export interface EditorBinding {
+    api: SharedConnections;
+    db: Database;
+}
+
 export async function withConnection<T>(api: SharedConnections, token: string, db: Database,
     work: (uri: string) => Promise<T>): Promise<T> {
     const uri = await api.connect(token, db.profile, db.name);

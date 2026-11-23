@@ -14,7 +14,7 @@ Klicke im **MSSQL-Objekt-Explorer** mit der rechten Maustaste auf eine Tabelle. 
 
 ## Drei Abkürzungen mit Tab
 
-Öffne einen verbundenen SQL-Editor und wähle in der Befehlspalette **SQL Developer Toolkit: Datenbank aus SQL-Editor übernehmen**. Sobald der Hinweis am Cursor erscheint, ist die Ergänzung bereit. Beide Demos verwenden die fiktive Tabelle `dbo.Buch`.
+Öffne einen SQL-Editor und verbinde ihn über MSSQL. Tab, Hover und Objektansicht starten automatisch und folgen beim Wechsel von Editor oder Datenbank der aktiven Verbindung. Beim ersten Zugriff fragt VS Code nach der MSSQL-Freigabe. Sobald der Hinweis am Cursor erscheint, ist die Ergänzung bereit. Beide Demos verwenden die fiktive Tabelle `dbo.Buch`.
 
 ### `SELECT *` → Spalten ausschreiben
 
