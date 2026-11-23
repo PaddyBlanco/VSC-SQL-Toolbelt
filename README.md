@@ -4,6 +4,14 @@
 
 **Per Rechtsklick stehen sieben Skriptvarianten wie in SSMS bereit.** Erzeuge `DROP` und `CREATE` zusammen in einem Skript oder ein `UPDATE`, das jede Primärschlüsselspalte im `WHERE` berücksichtigt.
 
+## Installieren
+
+Du brauchst **VS Code Desktop ab 1.105** und Microsofts Erweiterung **SQL Server (mssql)**. [MSSQL installieren](https://marketplace.visualstudio.com/items?itemName=ms-mssql.mssql)
+
+1. Lade im neuesten GitHub-Release unter **Assets** die Datei mit der Endung `.vsix` herunter. [Zum neuesten Release](https://github.com/PaddyBlanco/VSC-SQL-Toolbelt/releases/latest)
+2. Öffne in VS Code die Befehlspalette, wähle **Extensions: Install from VSIX…** und öffne die heruntergeladene Datei.
+3. Verbinde einen SQL-Editor über MSSQL. Tab und Hover sind automatisch aktiv. Für ein Update installierst du die VSIX des neuen Releases auf demselben Weg.
+
 ## Vom Rechtsklick zum Tabellenskript
 
 Klicke im **MSSQL-Objekt-Explorer** mit der rechten Maustaste auf eine Tabelle. Mit **Script Table as → CREATE To → New Query Editor Window** öffnest du ihre Definition in einem neuen SQL-Editor.
@@ -45,9 +53,9 @@ Zeige im verbundenen SQL-Editor zum Beispiel auf `dbo.Buch` in `SELECT * FROM db
 
 Das neue Abfragefenster erhält SQL erst, wenn MSSQL das ursprüngliche Verbindungsprofil und die Datenbank bestätigt. Falls VS Code einen leeren Editor öffnet, verbinde ihn über MSSQL und wähle **Verbindung prüfen und einfügen**.
 
-## Ausprobieren
+## Aus dem Quellcode entwickeln
 
-Du brauchst Desktop-VS-Code ab **1.105**, **Node.js ab 22** mit npm und Microsofts Erweiterung [SQL Server (mssql)](https://marketplace.visualstudio.com/items?itemName=ms-mssql.mssql). Der Referenzstand für den klassischen Objekt-Explorer ist MSSQL 1.48.0.
+Zum Bauen und Testen des Quellcodes brauchst du zusätzlich **Node.js ab 22** mit npm. Der Referenzstand für den klassischen Objekt-Explorer ist MSSQL 1.48.0.
 
 ```sh
 git clone https://github.com/PaddyBlanco/VSC-SQL-Toolbelt.git
@@ -57,12 +65,7 @@ npm test
 code .
 ```
 
-Starte mit **F5** die Konfiguration **SQL Developer Toolkit lokal testen**. Wenn du SQL-Toolbelt dauerhaft in deinem VS Code verwenden möchtest, baue und installiere die VSIX im Projektordner.
-
-```sh
-npx --yes --package=@vscode/vsce@4.1.1 vsce package --no-dependencies --out sql-toolbelt.vsix
-code --install-extension ./sql-toolbelt.vsix
-```
+Starte mit **F5** die Konfiguration **SQL Developer Toolkit lokal testen**.
 
 ## Mitwirken
 
