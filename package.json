@@ -1,0 +1,188 @@
+{
+  "name": "sql-toolbelt",
+  "displayName": "SQL Developer Toolkit",
+  "description": "SSMS-Scripting für Objekte einer ausdrücklich gewählten MSSQL-Datenbank.",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/PaddyBlanco/VSC-SQL-Toolbelt.git" },
+  "homepage": "https://github.com/PaddyBlanco/VSC-SQL-Toolbelt/wiki",
+  "bugs": { "url": "https://github.com/PaddyBlanco/VSC-SQL-Toolbelt/issues" },
+  "files": ["out/**/*.js", "README.md", "LICENSE"],
+  "publisher": "sql-toolbelt",
+  "engines": { "vscode": "^1.105.0" },
+  "extensionKind": ["workspace"],
+  "capabilities": { "untrustedWorkspaces": { "supported": false } },
+  "extensionDependencies": ["ms-mssql.mssql"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [{ "id": "sqlToolbelt.objects", "name": "SQL Developer Toolkit", "visibility": "collapsed" }]
+    },
+    "viewsWelcome": [{
+      "view": "sqlToolbelt.objects",
+      "contents": "Öffne einen verbundenen SQL-Editor.\n[Datenbank übernehmen](command:sqlToolbelt.bind)"
+    }],
+    "commands": [
+      { "command": "sqlToolbelt.bind", "title": "Datenbank aus SQL-Editor übernehmen", "category": "SQL Developer Toolkit" },
+      { "command": "sqlToolbelt.script", "title": "DROP and CREATE", "category": "SQL Developer Toolkit" },
+      { "command": "sqlToolbelt.insert", "title": "INSERT mit Testwerten", "category": "SQL Developer Toolkit" },
+      {"command": "sqlToolbelt.table.create.editor", "title": "New Query Editor Window", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.create.file", "title": "File ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.create.clipboard", "title": "Clipboard", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.create.job", "title": "Agent Job ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.alter", "title": "ALTER To", "enablement": "false"},
+      {"command": "sqlToolbelt.table.createOrAlter", "title": "CREATE OR ALTER To", "enablement": "false"},
+      {"command": "sqlToolbelt.table.drop.editor", "title": "New Query Editor Window", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.drop.file", "title": "File ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.drop.clipboard", "title": "Clipboard", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.drop.job", "title": "Agent Job ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.dropAndCreate.editor", "title": "New Query Editor Window", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.dropAndCreate.file", "title": "File ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.dropAndCreate.clipboard", "title": "Clipboard", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.dropAndCreate.job", "title": "Agent Job ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.select.editor", "title": "New Query Editor Window", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.select.file", "title": "File ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.select.clipboard", "title": "Clipboard", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.select.job", "title": "Agent Job ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.insert.editor", "title": "New Query Editor Window", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.insert.file", "title": "File ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.insert.clipboard", "title": "Clipboard", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.insert.job", "title": "Agent Job ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.update.editor", "title": "New Query Editor Window", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.update.file", "title": "File ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.update.clipboard", "title": "Clipboard", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.update.job", "title": "Agent Job ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.delete.editor", "title": "New Query Editor Window", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.delete.file", "title": "File ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.delete.clipboard", "title": "Clipboard", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.delete.job", "title": "Agent Job ...", "category": "SQL Developer Toolkit"},
+      {"command": "sqlToolbelt.table.execute", "title": "EXECUTE To", "enablement": "false"},
+      { "command": "sqlToolbelt.update", "title": "UPDATE mit Primärschlüssel", "category": "SQL Developer Toolkit" },
+      { "command": "sqlToolbelt.expand", "title": "SQL am Cursor ergänzen", "category": "SQL Developer Toolkit" },
+      { "command": "sqlToolbelt.tab", "title": "Aufgelöste SQL-Vorlage einsetzen", "category": "SQL Developer Toolkit" }
+    ],
+    "submenus": [
+      { "id": "sqlToolbelt.table", "label": "Script Table as" },
+      { "id": "sqlToolbelt.table.create", "label": "CREATE To" },
+      { "id": "sqlToolbelt.table.drop", "label": "DROP To" },
+      { "id": "sqlToolbelt.table.dropAndCreate", "label": "DROP And CREATE To" },
+      { "id": "sqlToolbelt.table.select", "label": "SELECT To" },
+      { "id": "sqlToolbelt.table.insert", "label": "INSERT To" },
+      { "id": "sqlToolbelt.table.update", "label": "UPDATE To" },
+      { "id": "sqlToolbelt.table.delete", "label": "DELETE To" }
+    ],
+    "keybindings": [{
+      "key": "tab", "command": "sqlToolbelt.tab",
+      "when": "editorTextFocus && editorLangId == sql && sqlToolbelt.canExpand && !editorReadonly && !editorTabMovesFocus && !suggestWidgetVisible && !inlineSuggestionVisible && !inSnippetMode && !editorHasMultipleSelections && !editorHasSelection && !renameInputVisible"
+    }],
+    "menus": {
+      "sqlToolbelt.table": [
+        {"submenu": "sqlToolbelt.table.create", "group": "script@1"},
+        {"command": "sqlToolbelt.table.alter", "group": "script@2"},
+        {"command": "sqlToolbelt.table.createOrAlter", "group": "script@3"},
+        {"submenu": "sqlToolbelt.table.drop", "group": "script@4"},
+        {"submenu": "sqlToolbelt.table.dropAndCreate", "group": "script@5"},
+        {"submenu": "sqlToolbelt.table.select", "group": "script@6"},
+        {"submenu": "sqlToolbelt.table.insert", "group": "script@7"},
+        {"submenu": "sqlToolbelt.table.update", "group": "script@8"},
+        {"submenu": "sqlToolbelt.table.delete", "group": "script@9"},
+        {"command": "sqlToolbelt.table.execute", "group": "script@10"}
+      ],
+      "sqlToolbelt.table.create": [
+        {"command": "sqlToolbelt.table.create.editor", "group": "target@1"},
+        {"command": "sqlToolbelt.table.create.file", "group": "target@2"},
+        {"command": "sqlToolbelt.table.create.clipboard", "group": "target@3"},
+        {"command": "sqlToolbelt.table.create.job", "group": "target@4"}
+      ],
+      "sqlToolbelt.table.drop": [
+        {"command": "sqlToolbelt.table.drop.editor", "group": "target@1"},
+        {"command": "sqlToolbelt.table.drop.file", "group": "target@2"},
+        {"command": "sqlToolbelt.table.drop.clipboard", "group": "target@3"},
+        {"command": "sqlToolbelt.table.drop.job", "group": "target@4"}
+      ],
+      "sqlToolbelt.table.dropAndCreate": [
+        {"command": "sqlToolbelt.table.dropAndCreate.editor", "group": "target@1"},
+        {"command": "sqlToolbelt.table.dropAndCreate.file", "group": "target@2"},
+        {"command": "sqlToolbelt.table.dropAndCreate.clipboard", "group": "target@3"},
+        {"command": "sqlToolbelt.table.dropAndCreate.job", "group": "target@4"}
+      ],
+      "sqlToolbelt.table.select": [
+        {"command": "sqlToolbelt.table.select.editor", "group": "target@1"},
+        {"command": "sqlToolbelt.table.select.file", "group": "target@2"},
+        {"command": "sqlToolbelt.table.select.clipboard", "group": "target@3"},
+        {"command": "sqlToolbelt.table.select.job", "group": "target@4"}
+      ],
+      "sqlToolbelt.table.insert": [
+        {"command": "sqlToolbelt.table.insert.editor", "group": "target@1"},
+        {"command": "sqlToolbelt.table.insert.file", "group": "target@2"},
+        {"command": "sqlToolbelt.table.insert.clipboard", "group": "target@3"},
+        {"command": "sqlToolbelt.table.insert.job", "group": "target@4"}
+      ],
+      "sqlToolbelt.table.update": [
+        {"command": "sqlToolbelt.table.update.editor", "group": "target@1"},
+        {"command": "sqlToolbelt.table.update.file", "group": "target@2"},
+        {"command": "sqlToolbelt.table.update.clipboard", "group": "target@3"},
+        {"command": "sqlToolbelt.table.update.job", "group": "target@4"}
+      ],
+      "sqlToolbelt.table.delete": [
+        {"command": "sqlToolbelt.table.delete.editor", "group": "target@1"},
+        {"command": "sqlToolbelt.table.delete.file", "group": "target@2"},
+        {"command": "sqlToolbelt.table.delete.clipboard", "group": "target@3"},
+        {"command": "sqlToolbelt.table.delete.job", "group": "target@4"}
+      ],
+      "view/item/context": [
+        { "submenu": "sqlToolbelt.table", "when": "view == objectExplorer && viewItem =~ /\\btype=Table\\b/", "group": "3_MSSQL_script@6" },
+        { "command": "sqlToolbelt.script", "when": "view == sqlToolbelt.objects && (viewItem == sqlToolbelt.object || viewItem == sqlToolbelt.table)" },
+        { "command": "sqlToolbelt.insert", "when": "view == sqlToolbelt.objects && viewItem == sqlToolbelt.table" },
+        { "command": "sqlToolbelt.update", "when": "view == sqlToolbelt.objects && viewItem == sqlToolbelt.table" }
+      ],
+      "commandPalette": [
+        {"command": "sqlToolbelt.table.create.editor", "when": "false"},
+        {"command": "sqlToolbelt.table.create.file", "when": "false"},
+        {"command": "sqlToolbelt.table.create.clipboard", "when": "false"},
+        {"command": "sqlToolbelt.table.create.job", "when": "false"},
+        {"command": "sqlToolbelt.table.alter", "when": "false"},
+        {"command": "sqlToolbelt.table.createOrAlter", "when": "false"},
+        {"command": "sqlToolbelt.table.drop.editor", "when": "false"},
+        {"command": "sqlToolbelt.table.drop.file", "when": "false"},
+        {"command": "sqlToolbelt.table.drop.clipboard", "when": "false"},
+        {"command": "sqlToolbelt.table.drop.job", "when": "false"},
+        {"command": "sqlToolbelt.table.dropAndCreate.editor", "when": "false"},
+        {"command": "sqlToolbelt.table.dropAndCreate.file", "when": "false"},
+        {"command": "sqlToolbelt.table.dropAndCreate.clipboard", "when": "false"},
+        {"command": "sqlToolbelt.table.dropAndCreate.job", "when": "false"},
+        {"command": "sqlToolbelt.table.select.editor", "when": "false"},
+        {"command": "sqlToolbelt.table.select.file", "when": "false"},
+        {"command": "sqlToolbelt.table.select.clipboard", "when": "false"},
+        {"command": "sqlToolbelt.table.select.job", "when": "false"},
+        {"command": "sqlToolbelt.table.insert.editor", "when": "false"},
+        {"command": "sqlToolbelt.table.insert.file", "when": "false"},
+        {"command": "sqlToolbelt.table.insert.clipboard", "when": "false"},
+        {"command": "sqlToolbelt.table.insert.job", "when": "false"},
+        {"command": "sqlToolbelt.table.update.editor", "when": "false"},
+        {"command": "sqlToolbelt.table.update.file", "when": "false"},
+        {"command": "sqlToolbelt.table.update.clipboard", "when": "false"},
+        {"command": "sqlToolbelt.table.update.job", "when": "false"},
+        {"command": "sqlToolbelt.table.delete.editor", "when": "false"},
+        {"command": "sqlToolbelt.table.delete.file", "when": "false"},
+        {"command": "sqlToolbelt.table.delete.clipboard", "when": "false"},
+        {"command": "sqlToolbelt.table.delete.job", "when": "false"},
+        {"command": "sqlToolbelt.table.execute", "when": "false"},
+        { "command": "sqlToolbelt.script", "when": "false" },
+        { "command": "sqlToolbelt.tab", "when": "false" },
+        { "command": "sqlToolbelt.insert", "when": "false" },
+        { "command": "sqlToolbelt.update", "when": "false" }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "npm run build && node --test test/catalog.test.cjs test/editor.test.cjs",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.105.0",
+    "typescript": "5.9.3"
+  }
+}

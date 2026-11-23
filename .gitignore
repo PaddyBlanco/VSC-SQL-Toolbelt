@@ -1,0 +1,21 @@
+# Nur diese Projektdateien für Git vormerken. Neue Ordner bewusst freigeben.
+*
+!/.gitignore
+!/LICENSE
+!/README.md
+!/SECURITY.md
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/.vscode/
+!/.vscode/launch.json
+!/src/
+!/src/extension.ts
+!/src/editor/
+!/src/editor/*.ts
+!/src/mssql/
+!/src/mssql/*.ts
+!/src/objektskripte/
+!/src/objektskripte/*.ts
+!/test/
+!/test/*.test.cjs
