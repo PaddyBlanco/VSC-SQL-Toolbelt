@@ -6,7 +6,13 @@
 
 ## Installieren
 
-Du brauchst **VS Code Desktop ab 1.105** und Microsofts Erweiterung **SQL Server (mssql)**. [MSSQL installieren](https://marketplace.visualstudio.com/items?itemName=ms-mssql.mssql)
+SQL-Toolbelt benötigt **VS Code Desktop ab 1.105** und die installierte Microsoft-Erweiterung **SQL Server (mssql)**. Sie stellt die Verbindung zu SQL Server bereit. [SQL Server (mssql) installieren](https://marketplace.visualstudio.com/items?itemName=ms-mssql.mssql)
+
+| Microsoft-Erweiterung | Angabe |
+| --- | --- |
+| Identifier | `ms-mssql.mssql` |
+| Getestete Version | `1.48.0` |
+| Last Updated im Marketplace für 1.48.0 | 17. November 2026 · [Versionsverlauf](https://marketplace.visualstudio.com/items?itemName=ms-mssql.mssql&ssr=false#version-history) |
 
 1. Lade im neuesten GitHub-Release unter **Assets** die Datei mit der Endung `.vsix` herunter. [Zum neuesten Release](https://github.com/PaddyBlanco/VSC-SQL-Toolbelt/releases/latest)
 2. Öffne in VS Code die Befehlspalette, wähle **Extensions: Install from VSIX…** und öffne die heruntergeladene Datei.
@@ -55,7 +61,7 @@ Das neue Abfragefenster erhält SQL erst, wenn MSSQL das ursprüngliche Verbindu
 
 ## Aus dem Quellcode entwickeln
 
-Zum Bauen und Testen des Quellcodes brauchst du zusätzlich **Node.js ab 22** mit npm. Der Referenzstand für den klassischen Objekt-Explorer ist MSSQL 1.48.0.
+Zum Bauen und Testen des Quellcodes brauchst du zusätzlich **Node.js ab 22** mit npm.
 
 ```sh
 git clone https://github.com/PaddyBlanco/VSC-SQL-Toolbelt.git
