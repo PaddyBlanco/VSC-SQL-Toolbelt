@@ -11,6 +11,7 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
     const event = () => ({ dispose() {} });
     const messages = [];
     const tabs = [];
+    let description = "Erste *Zeile*\n[Beispiel]", writes = 0, rejectWrite = false;
     let hover, command, receive, disposed, sessionChanged;
     const panel = { webview: { onDidReceiveMessage: fn => { receive = fn; return event(); },
         postMessage: async m => { messages.push(m); return true; } },
@@ -23,9 +24,15 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
             assert.equal(uri, "temp");
             let values;
             if (q.startsWith("SELECT DB_NAME() WHERE DB_ID()")) values = ["Archiv"];
-            else if (q.startsWith("SELECT DB_NAME(), o.object_id")) values = ["Archiv", "12", "dbo", "Buch", "Table"];
+            else if (q.startsWith("SELECT DB_NAME(), o.object_id")) values = ["Archiv", "12", "dbo", "Buch", "Table", description];
             else if (q.startsWith("SELECT DB_NAME(), SCHEMA_NAME")) values = ["Archiv", "dbo", "Buch"];
-            else { tabs.push(q); values = ["Test", "<Beispiel>"]; }
+            else if (q.startsWith("SET NOCOUNT ON;")) {
+                writes++;
+                if (rejectWrite) throw new Error("Provider detail");
+                const hex = q.match(/@next nvarchar\(3750\)=CONVERT\(nvarchar\(3750\),0x([a-f0-9]*)\)/)[1];
+                description = Buffer.from(hex, "hex").toString("utf16le");
+                values = ["saved"];
+            } else { tabs.push(q); values = q.includes("N'Beschreibung'") ? ["Beschreibung", description] : ["Test", "<Beispiel>"]; }
             return { rows: [values.map(displayValue => ({ displayValue }))] };
         }, scriptObject: async (_t, _u, operation) => { assert.equal(operation, 1); return "CREATE TABLE [dbo].[Buch](Id int);"; } };
     const vscode = {
@@ -38,7 +45,10 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
         languages: { registerHoverProvider: (_selector, fn) => { hover = fn.provideHover; return event(); } },
         commands: { registerCommand: (_name, fn) => { command = fn; return event(); } },
         Hover: class { constructor(contents) { this.contents = contents; } },
-        Range: class {}, MarkdownString: class { constructor(value) { this.value = value; } }, ViewColumn: { Beside: 2 }
+        Range: class {}, MarkdownString: class {
+            constructor(value) { this.value = value; }
+            appendText(text) { this.plainText = text; return this; }
+        }, ViewColumn: { Beside: 2 }
     };
     const original = Module._load;
     let registerInspector;
@@ -50,7 +60,12 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
     bind({ db, api });
     const get = async () => {
         const h = await hover(document, sql.indexOf("Buch"), { isCancellationRequested: false });
-        const link = h.contents[1];
+        assert.equal(h.contents[0].value, "Table · dbo.Buch");
+        if (description) {
+            assert.equal(h.contents[1].plainText, description);
+            assert.equal(h.contents[1].isTrusted, undefined);
+        } else assert.equal(h.contents.length, 2);
+        const link = h.contents.at(-1);
         assert.deepEqual(link.isTrusted.enabledCommands, ["sqlToolbelt.showDetails"]);
         return JSON.parse(decodeURIComponent(link.value.match(/\?([^)]*)\)$/)[1]))[0];
     };
@@ -92,6 +107,26 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
     assert.deepEqual(inserted, [preview]);
     await receive({ action: "load", tab: "other", request: 10 });
     assert.equal(messages.length, 4);
+    await receive({ action: "saveDescription", tab: "properties", request: 1, value: "alt" });
+    assert.equal(writes, 0);
+    await receive({ action: "load", tab: "properties", request: 5 });
+    await receive({ action: "saveDescription", tab: "properties", request: 5, value: {} });
+    assert.equal(writes, 0);
+    rejectWrite = true;
+    const save = value => receive({ action: "saveDescription", tab: "properties", request: 5, value, schema: "Fremd", name: "Anderes" });
+    await save("Neu");
+    assert.match(messages.at(-1).saveError, /Berechtigung|berechtigung/);
+    assert.doesNotMatch(messages.at(-1).saveError, /Provider detail/);
+    rejectWrite = false;
+    await save("Neue Beschreibung");
+    assert.equal(messages.at(-1).saved, true);
+    assert.equal(description, "Neue Beschreibung");
+    vscode.window.activeTextEditor = editor;
+    api.getActiveDatabase = async () => db.name;
+    await get();
+    await save("");
+    await get();
+    assert.equal(writes, 3);
     bind();
     assert.ok(!disposed);
     sessionChanged({ provider: { id: api.authenticationProviderId } });

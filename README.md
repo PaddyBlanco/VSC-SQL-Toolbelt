@@ -50,14 +50,16 @@ Drück <kbd>Tab</kbd> direkt hinter `EXEC [dbo].[GetTotal]`. Über dem Aufruf st
 
 ## Objektdetails per Hover
 
-Zeige im verbundenen SQL-Editor zum Beispiel auf `dbo.Buch` in `SELECT * FROM dbo.Buch`. Über **Details öffnen** siehst du vier Tabs für die Tabelle, View, Prozedur oder T-SQL-Funktion.
+Zeige im verbundenen SQL-Editor zum Beispiel auf `dbo.Buch` in `SELECT * FROM dbo.Buch`. Hat das Objekt eine Beschreibung, liest du sie direkt unter seinem Namen. Über **Details öffnen** gelangst du zu vier Tabs für die Tabelle, View, Prozedur oder T-SQL-Funktion.
 
 | Tab | Was du siehst |
 | --- | --- |
 | Dependencies | Statische ein- und ausgehende Referenzen sowie Fremdschlüssel, soweit deine Berechtigungen sie sichtbar machen |
 | Create | Die MSSQL-Definition. Doppelklick oder **Im SQL-Editor öffnen** übernimmt sie in ein neues Abfragefenster |
 | Keys / Indexes | Eine Zeile je Index. **Index key columns** zeigt die Schlüsselspalten in Reihenfolge mit ASC/DESC, **Included columns** die zusätzlichen Spalten. Bei Fremdschlüsseln erscheint das Ziel. |
-| Properties | Name, Typ, Schema, Beschreibung, Datenbank und Server. Bei Tabellen auch Identity-Spalte, Indexierbarkeit, Lock Escalation und Datenspeicher |
+| Properties | Name, Typ, Schema, Datenbank, Server und eine mehrzeilig bearbeitbare Objektbeschreibung. Bei Tabellen auch Identity-Spalte, Indexierbarkeit, Lock Escalation und Datenspeicher |
+
+Unter **Properties** schreibt **Speichern** die Beschreibung als `MS_Description` beim angezeigten Objekt in SQL Server. Dazu verwendet das Toolkit das ursprüngliche Verbindungsprofil, die Zieldatenbank und die Rechte deiner Anmeldung. **Abbrechen** verwirft den Entwurf. Ein leeres Feld speichern leert die Beschreibung.
 
 Das CREATE-Skript erscheint automatisch im neuen Editor, sobald MSSQL das ursprüngliche Profil und die Zieldatenbank meldet. Das gilt auch bei verzögertem Verbindungsaufbau. Ist die automatische Verbindung deaktiviert oder eine andere Verbindung aktiv, wähle im neuen SQL-Editor über MSSQL das ursprüngliche Profil und die Zieldatenbank.
 

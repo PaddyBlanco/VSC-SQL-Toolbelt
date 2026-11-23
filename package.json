@@ -1,8 +1,8 @@
 {
   "name": "sql-toolbelt",
   "displayName": "SQL Developer Toolkit",
-  "description": "SELECT *, INSERT und EXEC per Tab ergänzen, SQL-Objekte per Hover mit CREATE und Indizes erkunden und sieben Tabellenskripte per Rechtsklick erzeugen.",
-  "version": "0.1.4",
+  "description": "SELECT *, INSERT und EXEC per Tab ergänzen, CREATE und Indizes per Hover ansehen, Objektbeschreibungen bearbeiten und sieben Tabellenskripte per Rechtsklick erzeugen.",
+  "version": "0.1.5",
   "private": true,
   "license": "MIT",
   "repository": { "type": "git", "url": "https://github.com/PaddyBlanco/VSC-SQL-Toolbelt.git" },

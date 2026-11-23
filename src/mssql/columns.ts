@@ -22,15 +22,19 @@ export function parameterizedType(c: Pick<Column, "type" | "bytes" | "precision"
     }
 }
 
-// Encode names as UTF-16LE binary constants. Editor text cannot introduce SQL tokens.
-export function nameLiteral(name: string) {
-    if (!name.length || name.length > 128) throw new ToolkitError("Ungültige Länge des SQL-Bezeichners.");
+// Encode text as UTF-16LE binary constants. Input cannot introduce SQL tokens or batch separators.
+export function unicodeBinary(value: string) {
     let hex = "";
-    for (let i = 0; i < name.length; i++) {
-        const unit = name.charCodeAt(i);
+    for (let i = 0; i < value.length; i++) {
+        const unit = value.charCodeAt(i);
         hex += (unit & 255).toString(16).padStart(2, "0") + (unit >> 8).toString(16).padStart(2, "0");
     }
-    return "CONVERT(nvarchar(128), 0x" + hex + ")";
+    return "0x" + hex;
+}
+
+export function nameLiteral(name: string) {
+    if (!name.length || name.length > 128) throw new ToolkitError("Ungültige Länge des SQL-Bezeichners.");
+    return "CONVERT(nvarchar(128), " + unicodeBinary(name) + ")";
 }
 
 export function objectNameValue(source: Source) {

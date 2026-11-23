@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const { candidate } = require("../out/editor/candidate");
 const { hoverTarget } = require("../out/editor/hoverTarget");
 const { detailRows } = require("../out/mssql/details");
+const { saveDescription } = require("../out/mssql/description");
 const { inspectorPage } = require("../out/editor/inspectorPage");
 const { dml } = require("../out/objektskripte/dml");
 const { replacement } = require("../out/editor/replacement");
@@ -81,6 +82,23 @@ test("Keys / Indexes gruppiert Indexspalten und zusammengesetzte Fremdschlüssel
         ["NONCLUSTERED", "BuchKey", "[Band] DESC, [Teil] ASC", "[Titel, kurz], [Text]", "—"],
         ["PRIMARY KEY", "PK_Buch", "[Id] ASC", "—", "—"]
     ]);
+});
+
+test("Beschreibung prüft die UTF-16-Grenze und meldet veraltete Texte oder Katalogfehler", async () => {
+    const object = { id: 81, schema: "dbo", name: "Buch", type: "Table" }, db = { profile: "Test", name: "Demo" };
+    let calls = 0, status = "changed", errors = false;
+    const api = { executeSimpleQuery: async () => {
+        calls++;
+        return { rows: [[{ displayValue: status }]], messages: [{ isError: errors }] };
+    } };
+    const save = value => saveDescription(api, "", "", db, object, "Alt", value);
+    await assert.rejects(save("📘".repeat(1875) + "X"), /7.500 Byte/);
+    assert.equal(calls, 0);
+    await assert.rejects(save("Neu"), /inzwischen geändert/);
+    status = "saved";
+    await save("📘".repeat(1875));
+    errors = true;
+    await assert.rejects(save(""), /Speichern fehlgeschlagen/);
 });
 
 test("Webview hat eine frische CSP und behandelt Katalogwerte ausschließlich als Text", () => {

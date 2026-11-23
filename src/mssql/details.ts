@@ -2,23 +2,27 @@ import { catalogRows, sqlId, type CatalogObject } from "./catalog";
 import { objectNameValue, type Source } from "./columns";
 import { ToolkitError, type Database, type SharedConnections } from "./connection";
 
-export async function resolveObject(api: SharedConnections, token: string, uri: string, db: Database, source: Source): Promise<CatalogObject> {
+const descriptionJoin = `LEFT JOIN sys.extended_properties ep ON ep.class=1 AND ep.major_id=o.object_id AND ep.minor_id=0 AND ep.name=N'MS_Description'`;
+const descriptionValue = `COALESCE(TRY_CONVERT(nvarchar(max),ep.value),N'')`;
+
+export async function resolveObject(api: SharedConnections, token: string, uri: string, db: Database, source: Source) {
     const [row] = await catalogRows(api, token, uri, `SELECT DB_NAME(), o.object_id, SCHEMA_NAME(o.schema_id), o.name,
-CASE o.type WHEN 'U' THEN 'Table' WHEN 'V' THEN 'View' WHEN 'P' THEN 'StoredProcedure' ELSE 'UserDefinedFunction' END
-FROM sys.objects o WHERE o.object_id=OBJECT_ID(${objectNameValue(source)}) AND o.is_ms_shipped=0 AND o.type IN ('U','V','P','FN','IF','TF')`);
+CASE o.type WHEN 'U' THEN 'Table' WHEN 'V' THEN 'View' WHEN 'P' THEN 'StoredProcedure' ELSE 'UserDefinedFunction' END, ${descriptionValue}
+FROM sys.objects o ${descriptionJoin}
+WHERE o.object_id=OBJECT_ID(${objectNameValue(source)}) AND o.is_ms_shipped=0 AND o.type IN ('U','V','P','FN','IF','TF')`);
     if (!row || row[0] !== db.name) throw new ToolkitError("Objekt im gebundenen Kontext nicht sichtbar.");
-    return { id: sqlId(Number(row[1])), schema: row[2], name: row[3], type: row[4] };
+    return { id: sqlId(Number(row[1])), schema: row[2], name: row[3], type: row[4], description: row[5] };
 }
 
 const properties = `SELECT p.label, p.value FROM sys.objects o
 LEFT JOIN sys.tables t ON t.object_id=o.object_id
-LEFT JOIN sys.extended_properties ep ON ep.class=1 AND ep.major_id=o.object_id AND ep.minor_id=0 AND ep.name=N'MS_Description'
+${descriptionJoin}
 LEFT JOIN sys.indexes i ON i.object_id=t.object_id AND i.index_id IN (0,1)
 LEFT JOIN sys.data_spaces ds ON ds.data_space_id=i.data_space_id
 CROSS APPLY (VALUES
  (1,N'Name',o.name COLLATE DATABASE_DEFAULT),(2,N'Typ',o.type_desc),(3,N'Schema',SCHEMA_NAME(o.schema_id)),
  (4,N'Datenbank',DB_NAME()),(5,N'Server',CONVERT(nvarchar(128),SERVERPROPERTY('ServerName'))),
- (6,N'Beschreibung',TRY_CONVERT(nvarchar(max),ep.value)),
+ (6,N'Beschreibung',${descriptionValue}),
  (7,N'Identity-Spalte',(SELECT c.name FROM sys.identity_columns c WHERE c.object_id=t.object_id)),
  (8,N'Indexierbar',CASE OBJECTPROPERTYEX(o.object_id,'IsIndexable') WHEN 1 THEN N'Ja' WHEN 0 THEN N'Nein' END),
  (9,N'Lock Escalation',t.lock_escalation_desc),

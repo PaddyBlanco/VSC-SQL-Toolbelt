@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { CatalogObject } from "../mssql/catalog";
-import { withConnection, type Database, type EditorBinding, type SharedConnections } from "../mssql/connection";
+import { ToolkitError, withConnection, type Database, type EditorBinding, type SharedConnections } from "../mssql/connection";
+import { saveDescription } from "../mssql/description";
 import { detailRows, resolveObject, tabs, type Tab } from "../mssql/details";
 import { report } from "../mssql/session";
 import { ddlScript } from "../objektskripte/script";
@@ -14,6 +15,7 @@ function showDetails(db: Database, api: SharedConnections, object: CatalogObject
         vscode.ViewColumn.Beside, { enableScripts: true, localResourceRoots: [] });
     let revision = 0;
     let script: { sql: string; request: number } | undefined;
+    let description: { value: string; request: number } | undefined;
     const receive = panel.webview.onDidReceiveMessage(async message => {
         if (!message || !tabs.includes(message.tab) || !Number.isSafeInteger(message.request)) return;
         const { action, request }: { action: unknown; request: number } = message;
@@ -24,9 +26,34 @@ function showDetails(db: Database, api: SharedConnections, object: CatalogObject
             }
             return;
         }
+        if (action === "saveDescription") {
+            const original = description;
+            if (tab !== "properties" || original?.request !== request || typeof message.value !== "string") return;
+            const id = revision;
+            description = undefined;
+            try {
+                const auth = await vscode.authentication.getSession(api.authenticationProviderId, [], { silent: true });
+                if (!auth) throw new Error();
+                await withConnection(api, auth.accessToken, db, async uri => {
+                    if (id === revision) await saveDescription(api, auth.accessToken, uri, db, object, original.value, message.value);
+                });
+                if (id === revision) {
+                    description = { value: message.value, request };
+                    await panel.webview.postMessage({ tab, request, saved: true, value: message.value });
+                }
+            } catch (error) {
+                if (id === revision) {
+                    description = original;
+                    await panel.webview.postMessage({ tab, request, saveError: error instanceof ToolkitError
+                        ? error.message : "Speichern fehlgeschlagen. Verbindung und Änderungsberechtigung am Objekt prüfen." });
+                }
+            }
+            return;
+        }
         if (action !== "load") return;
         const id = ++revision;
         script = undefined;
+        description = undefined;
         try {
             const auth = await vscode.authentication.getSession(api.authenticationProviderId, [], { silent: true });
             if (!auth) throw new Error();
@@ -36,12 +63,16 @@ function showDetails(db: Database, api: SharedConnections, object: CatalogObject
                 : { rows: await withConnection(api, token, db, uri => detailRows(api, token, uri, db, object, tab)) };
             if (revision !== id) return;
             if (data.sql !== undefined) script = { sql: data.sql, request };
+            if (tab === "properties") {
+                const row = data.rows?.find(([label]) => label === "Beschreibung");
+                if (row) description = { value: row[1], request };
+            }
             await panel.webview.postMessage({ tab, request, ...data });
         } catch {
             if (id === revision) void panel.webview.postMessage({ tab, request, error: "Metadaten nicht verfügbar. Verbindung, Objekt und Leserechte prüfen." });
         }
     });
-    panel.onDidDispose(() => { revision++; script = undefined; receive.dispose(); });
+    panel.onDidDispose(() => { revision++; script = undefined; description = undefined; receive.dispose(); });
     panel.webview.html = inspectorPage();
     return panel;
 }
@@ -101,7 +132,9 @@ export function registerInspector(context: vscode.ExtensionContext) {
                     } };
                     const link = new vscode.MarkdownString("[Details öffnen](command:" + command + "?" + encodeURIComponent(JSON.stringify([key])) + ")");
                     link.isTrusted = { enabledCommands: [command] };
-                    return new vscode.Hover([{ language: "sql", value: object.type + " · " + object.schema + "." + object.name }, link],
+                    const summary = { language: "sql", value: object.type + " · " + object.schema + "." + object.name };
+                    const contents = object.description ? [summary, new vscode.MarkdownString().appendText(object.description), link] : [summary, link];
+                    return new vscode.Hover(contents,
                         new vscode.Range(document.positionAt(target.start), document.positionAt(target.end)));
                 } catch { return; }
             }
