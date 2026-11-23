@@ -1,9 +1,9 @@
 import { identifier, type Relation } from "../mssql/columns";
 import { ToolkitError } from "../mssql/connection";
 import { dml } from "../objektskripte/dml";
-import type { Candidate } from "./candidate";
+import type { RelationCandidate } from "./candidate";
 
-export function replacement(text: string, match: Candidate, relations: Relation[], indent: string, eol: string) {
+export function replacement(text: string, match: RelationCandidate, relations: Relation[], indent: string, eol: string) {
     const line = text.slice(text.lastIndexOf("\n", match.start - 1) + 1, match.start);
     const base = line.match(/^\s*/)?.[0] ?? "";
     if (match.kind === "insert") {

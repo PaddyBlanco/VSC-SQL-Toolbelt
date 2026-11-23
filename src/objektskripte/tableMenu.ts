@@ -14,7 +14,7 @@ export function registerTableMenu(context: vscode.ExtensionContext) {
                     const { db, object } = explorerTable(node);
                     const { api, token } = await session();
                     const sql = await objectScript(api, token, db, { ...object, type: "Table" }, op);
-                    await deliver(destination, sql, db.name, `${object.schema}.${object.name} - ${op}`);
+                    await deliver(destination, sql, db, `${object.schema}.${object.name} - ${op}`, node);
                 } catch (error) { report(error); }
             });
             context.subscriptions.push(command);

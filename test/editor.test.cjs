@@ -3,6 +3,8 @@ const assert = require("node:assert/strict");
 const { candidate } = require("../out/editor/candidate.js");
 const { replacement } = require("../out/editor/replacement.js");
 const { dml } = require("../out/objektskripte/dml.js");
+const { execReplacement } = require("../out/editor/exec.js");
+const { Metadata } = require("../out/editor/metadata.js");
 
 const col = { name: "Name", type: "nvarchar", bytes: 30, key: 0, writable: true, nullable: false };
 const table = { table: true, schema: "dbo", name: "Test", columns: [
@@ -85,4 +87,64 @@ test("UPDATE mit zusammengesetztem PK enthält beide Vergleiche", () => {
     assert.match(sql, /WHERE \[Id\] = @pk1\n  AND \[Mandant\] = @pk2;/);
     assert.match(sql, /DECLARE @pk2 nvarchar\(15\) = NULL/);
     assert.throws(() => dml({ ...table, columns: [col] }, "update"));
+});
+
+test("EXEC übernimmt die Signatur vom gebundenen Katalog und gibt nur OUTPUT-Parameter aus", async () => {
+    const db = { profile: "Testprofil", name: "Demo" };
+    let reads = 0;
+    const api = {
+        getActiveEditorConnectionId: async () => db.profile,
+        getActiveDatabase: async () => db.name,
+        connect: async () => "Verbindung", disconnect: async () => {},
+        async executeSimpleQuery(token, uri, query) {
+            reads++;
+            assert.match(query, /FROM sys\.procedures/);
+            assert.match(query, /ORDER BY p\.parameter_id/);
+            assert.doesNotMatch(query, /GetTotal/);
+            const rows = [
+                ["@OrderId", "int", 4, 10, 0, 0, 0, ""],
+                ["@Lines", "LineType", -1, 0, 0, 0, 0, "[sales].[LineType]"],
+                ["@Total", "decimal", 9, 12, 2, 1, 0, ""],
+                ["@Note", "nvarchar", -1, 0, 0, 1, 0, ""]
+            ];
+            return { rows: rows.map(row => [db.name, ...row].map(value => ({ displayValue: String(value) }))) };
+        }
+    };
+    const sql = "USE [Demo];\r\nDECLARE @OrderId int;\r\n\texec [sales].[GetTotal];\r\nSELECT 1;";
+    const pos = sql.indexOf("GetTotal]") + "GetTotal]".length;
+    const match = candidate(sql, pos, db.name);
+    assert.equal(match.kind, "exec");
+    assert.equal(match.source.schema, "sales");
+    const metadata = new Metadata(api, db);
+    const parameters = await metadata.parameters("token", match.source);
+    await metadata.parameters("token", match.source);
+    assert.equal(reads, 1);
+    const edit = execReplacement(sql, match, parameters, "\t", "\r\n");
+    assert.equal(sql.slice(0, edit.start) + edit.value + sql.slice(edit.end), [
+        "USE [Demo];", "DECLARE @OrderId int;", "\tDECLARE @OrderId_2 int;", "\tDECLARE @Lines [sales].[LineType];",
+        "\tDECLARE @Total decimal(12,2);", "\tDECLARE @Note nvarchar(max);", "", "\texec [sales].[GetTotal]",
+        "\t\t@OrderId = @OrderId_2,", "\t\t@Lines = @Lines,", "\t\t@Total = @Total OUTPUT,", "\t\t@Note = @Note OUTPUT;", "",
+        "\tSELECT @Total AS [Total],", "\t\t@Note AS [Note];", "SELECT 1;"
+    ].join("\r\n"));
+    api.getActiveDatabase = async () => "Andere";
+    await assert.rejects(metadata.parameters("token", match.source), /Datenbank dieses SQL-Editors/);
+});
+
+test("EXECUTE ohne Ausgabeparameter erzeugt Deklaration und Aufruf", () => {
+    const sql = "EXECUTE [My]]Proc] ";
+    const match = candidate(sql, sql.length);
+    assert.equal(match.source.name, "My]Proc");
+    assert.equal(execReplacement(sql, match, [{ name: "@Id", declarationType: "int", output: false }], "    ", "\n").value,
+        "DECLARE @Id int;\n\nEXECUTE [My]]Proc]\n    @Id = @Id;");
+});
+
+test("EXEC ergänzt nur einen eigenständigen, noch leeren Aufruf in der gebundenen Datenbank", () => {
+    for (const sql of ["EXEC dbo.P @Id = 1", "EXEC dbo.P\n  @Id = 1", "EXEC dbo.P WITH RECOMPILE", "EXEC dbo.P;2",
+        "EXEC dbo.P.Extra", "INSERT INTO dbo.T\nEXEC dbo.P", "IF 1=1\nEXEC dbo.P", "-- EXEC dbo.P",
+        "SELECT 'EXEC dbo.P'", "USE [Andere]; EXEC dbo.P"]) {
+        assert.equal(candidate(sql, sql.indexOf("dbo.P") + 5, "Demo"), undefined, sql);
+    }
+    for (const sql of ["EXEC (@sql)", "EXEC @proc", "EXEC AS", "EXEC @rc = dbo.P"]) {
+        assert.equal(candidate(sql, sql.length), undefined, sql);
+    }
 });

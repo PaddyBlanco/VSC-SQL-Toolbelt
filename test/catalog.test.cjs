@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { ddlScript } = require("../out/objektskripte/script.js");
 const { objectsQuery } = require("../out/mssql/catalog.js");
+const { readParameters } = require("../out/mssql/parameters.js");
 
 const db = { profile: "Profil B", name: "B" };
 const table = { type: "Table", schema: "dbo", name: "Test", id: 123 };
@@ -77,4 +78,13 @@ test("nur ganzzahlige Katalog-IDs gelangen in die Abfrage", () => {
     assert.throws(() => objectsQuery("1abc"));
     assert.throws(() => objectsQuery(NaN));
     assert.match(objectsQuery(7), /schema_id = 7 /);
+});
+
+test("EXEC verwirft leere Signaturen, fremde Datenbanken und nicht darstellbare Parameter", async () => {
+    for (const rows of [[], [["A", "@Id", "int", "4", "10", "0", "0", "0", ""]],
+        [["B", "@Result", "cursor", "0", "0", "0", "1", "1", ""]],
+        [["B", "@Data", "xml", "-1", "0", "0", "0", "0", "?"]]]) {
+        const api = { executeSimpleQuery: async () => ({ rows: rows.map(row => row.map(displayValue => ({ displayValue }))) }) };
+        await assert.rejects(readParameters(api, "session", "uri", db, { name: "GetTotal" }));
+    }
 });

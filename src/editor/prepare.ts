@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ToolkitError } from "../mssql/connection";
 import { candidate } from "./candidate";
+import { execReplacement } from "./exec";
 import { Metadata } from "./metadata";
 import { replacement } from "./replacement";
 
@@ -15,18 +16,19 @@ export async function prepare(store: Metadata, explicit = false) {
     const offset = doc.offsetAt(position);
     const match = candidate(text, offset, store.db.name);
     if (!match) {
-        if (explicit) throw new ToolkitError(`Kein passendes SQL-Ziel am Cursor. Cursor hinter * oder hinter INSERT INTO [Schema].[Tabelle] setzen. Ein vorausgehendes USE muss auf ${store.db.name} verweisen.`);
+        if (explicit) throw new ToolkitError(`Cursor hinter *, INSERT INTO [Tabelle] oder EXEC [Prozedur] setzen. Ein vorausgehendes USE muss auf ${store.db.name} verweisen.`);
         return;
     }
-    if (match.sources.length > 16) throw new ToolkitError("Pro SELECT werden maximal 16 Quellen unterstützt.");
+    if (match.kind === "select" && match.sources.length > 16) throw new ToolkitError("Pro SELECT werden maximal 16 Quellen unterstützt.");
     const version = doc.version;
     const auth = await vscode.authentication.getSession(store.api.authenticationProviderId, [], { silent: true });
     if (!auth) throw new ToolkitError("MSSQL-Freigabe fehlt. Datenbank aus SQL-Editor erneut übernehmen.");
-    const relations = await store.resolve(auth.accessToken, match.sources);
     const indent = editor.options.insertSpaces === false ? "\t" : " ".repeat(Number(editor.options.tabSize) || 4);
     const eol = doc.eol === vscode.EndOfLine.CRLF ? "\r\n" : "\n";
-    return { editor, version, position, kind: match.kind, store,
-        change: replacement(text, match, relations, indent, eol), until: Date.now() + 30_000 };
+    const change = match.kind === "exec"
+        ? execReplacement(text, match, await store.parameters(auth.accessToken, match.source), indent, eol)
+        : replacement(text, match, await store.resolve(auth.accessToken, match.sources), indent, eol);
+    return { editor, version, position, kind: match.kind, store, change, until: Date.now() + 30_000 };
 }
 
 export type Prepared = NonNullable<Awaited<ReturnType<typeof prepare>>>;

@@ -13,6 +13,15 @@ export interface Relation {
 
 export function identifier(name: string) { return "[" + name.replaceAll("]", "]]") + "]"; }
 
+export function parameterizedType(c: Pick<Column, "type" | "bytes" | "precision" | "scale">) {
+    switch (c.type) {
+        case "char": case "varchar": case "binary": case "varbinary": return `${c.type}(${c.bytes === -1 ? "max" : c.bytes})`;
+        case "nchar": case "nvarchar": return `${c.type}(${c.bytes === -1 ? "max" : c.bytes / 2})`;
+        case "decimal": case "numeric": return `${c.type}(${c.precision},${c.scale})`;
+        case "time": case "datetime2": case "datetimeoffset": return `${c.type}(${c.scale})`;
+    }
+}
+
 // Encode names as UTF-16LE binary constants. Editor text cannot introduce SQL tokens.
 function nameValue(name: string) {
     if (!name.length || name.length > 128) throw new ToolkitError("Ungültige Länge des SQL-Bezeichners.");
@@ -32,7 +41,8 @@ export async function readRelation(api: SharedConnections, token: string, uri: s
     const qualified = objectNameValue(source);
     const rows = await catalogRows(api, token, uri, `SELECT DB_NAME(), o.object_id, SCHEMA_NAME(o.schema_id), o.name, RTRIM(o.type),
 c.name, TYPE_NAME(c.system_type_id), c.max_length, c.precision, c.scale,
-CONVERT(int,c.is_nullable), CONVERT(int,c.is_hidden),
+CONVERT(int,c.is_nullable), CASE WHEN c.is_hidden=1 OR (c.is_sparse=1 AND EXISTS
+    (SELECT 1 FROM sys.columns cs WHERE cs.object_id=c.object_id AND cs.is_column_set=1)) THEN 1 ELSE 0 END,
 CASE WHEN c.is_identity=1 OR c.is_computed=1 OR c.is_hidden=1 OR c.generated_always_type<>0 OR c.system_type_id=189 OR c.is_column_set=1 THEN 0 ELSE 1 END,
 CASE WHEN c.default_object_id<>0 THEN 1 ELSE 0 END, ISNULL(pk.key_ordinal,0), ISNULL(pk.key_count,0), TYPE_NAME(c.user_type_id)
 FROM sys.objects o JOIN sys.columns c ON c.object_id=o.object_id

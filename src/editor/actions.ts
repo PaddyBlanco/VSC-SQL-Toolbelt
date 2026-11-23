@@ -37,7 +37,7 @@ export function registerEditor(context: vscode.ExtensionContext) {
                 ready = edit;
                 await vscode.commands.executeCommand("setContext", key, true);
                 if (ready !== edit) return;
-                const contentText = edit.kind === "insert" ? "Tab · Spalten und VALUES" : "Tab · Spalten einfügen";
+                const contentText = { exec: "Tab · Prozedurparameter einfügen", insert: "Tab · Spalten und VALUES", select: "Tab · Spalten einfügen" }[edit.kind];
                 edit.editor.setDecorations(hint, [{
                     range: new vscode.Range(edit.position, edit.position),
                     renderOptions: { after: { contentText } }

@@ -1,6 +1,6 @@
 # SQL-Toolbelt für VS Code
 
-**Mit einem Druck auf <kbd>Tab</kbd> wird aus `SELECT *` eine explizite Spaltenliste und aus `INSERT INTO` eine Vorlage mit passenden Testwerten.** Die Spalten und Datentypen kommen direkt aus deiner MSSQL-Datenbank.
+**Ein Druck auf <kbd>Tab</kbd> schreibt `SELECT *` aus, ergänzt `INSERT INTO` um Spalten und Werte oder baut für `EXEC` einen typisierten Prozeduraufruf.** Zeige auf einen SQL-Objektnamen, um Definition, Abhängigkeiten, Schlüssel und Indizes direkt im Editor zu erkunden.
 
 **Per Rechtsklick stehen sieben Skriptvarianten wie in SSMS bereit.** Erzeuge `DROP` und `CREATE` zusammen in einem Skript oder ein `UPDATE`, das jede Primärschlüsselspalte im `WHERE` berücksichtigt.
 
@@ -31,6 +31,19 @@ Drück <kbd>Tab</kbd> direkt hinter `INSERT INTO dbo.Buch`. Du bekommst die Spal
 ### `EXEC` → Prozedurparameter ergänzen
 
 Drück <kbd>Tab</kbd> direkt hinter `EXEC [dbo].[GetTotal]`. Über dem Aufruf stehen dann typisierte `DECLARE`-Variablen für alle Parameter. Der Aufruf übergibt sie mit Namen. Hat die Prozedur Ausgabeparameter, zeigt ein `SELECT` darunter deren Werte. Fülle die Eingabevariablen vor dem Ausführen aus.
+
+## Objektdetails per Hover
+
+Zeige im verbundenen SQL-Editor zum Beispiel auf `dbo.Buch` in `SELECT * FROM dbo.Buch`. Über **Details öffnen** siehst du vier Tabs für die Tabelle, View, Prozedur oder T-SQL-Funktion.
+
+| Tab | Was du siehst |
+| --- | --- |
+| Dependencies | Statische ein- und ausgehende Referenzen sowie Fremdschlüssel, soweit deine Berechtigungen sie sichtbar machen |
+| Create | Die MSSQL-Definition. Doppelklick oder **Im SQL-Editor öffnen** übernimmt sie in ein neues Abfragefenster |
+| Keys / Indexes | Namen, Schlüsselspalten in Reihenfolge, Sortierung, INCLUDE-Spalten und Fremdschlüsselziele |
+| Properties | Name, Typ, Schema, Beschreibung, Datenbank und Server. Bei Tabellen auch Identity-Spalte, Indexierbarkeit, Lock Escalation und Datenspeicher |
+
+Das neue Abfragefenster erhält SQL erst, wenn MSSQL das ursprüngliche Verbindungsprofil und die Datenbank bestätigt. Falls VS Code einen leeren Editor öffnet, verbinde ihn über MSSQL und wähle **Verbindung prüfen und einfügen**.
 
 ## Ausprobieren
 
