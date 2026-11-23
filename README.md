@@ -24,7 +24,7 @@ Klicke im **MSSQL-Objekt-Explorer** mit der rechten Maustaste auf eine Tabelle. 
 
 ![Tabellen-Kontextmenü mit geöffnetem „Script Table as“, dem Untermenü „CREATE To“ und den vier Ausgabezielen](assets/script-table-as.png)
 
-Über dasselbe Menü erzeugst du auch SELECT, INSERT, UPDATE, DELETE oder ein kombiniertes DROP und CREATE. Als Ziel kannst du den Editor, eine Datei, die Zwischenablage oder einen Entwurf für einen SQL-Agent-Job wählen. Du entscheidest anschließend, ob du das Skript ausführst.
+Über dasselbe Menü erzeugst du auch SELECT, INSERT, UPDATE, DELETE oder ein kombiniertes DROP und CREATE. **SELECT To** erzeugt eine Spaltenliste mit `TOP (1000)`. Als Ziel kannst du den Editor, eine Datei, die Zwischenablage oder einen Entwurf für einen SQL-Agent-Job wählen. Du entscheidest anschließend, ob du das Skript ausführst.
 
 ## Drei Abkürzungen mit Tab
 
@@ -33,6 +33,8 @@ Klicke im **MSSQL-Objekt-Explorer** mit der rechten Maustaste auf eine Tabelle. 
 ### `SELECT *` → Spalten ausschreiben
 
 Setz den Cursor direkt hinter `*` und drück <kbd>Tab</kbd>. Aus dem Sternchen werden hier `[Id]`, `[Titel]` und `[Seiten]`. Bei `SELECT b.*` bleiben die ergänzten Spalten mit dem Alias `b` qualifiziert.
+
+Steht über der Abfrage eine eigene Zeile wie `USE [Archiv]`, verwenden Tab und Hover die Metadaten dieser Datenbank auf demselben Verbindungsprofil. Die Zeile funktioniert auch ohne Semikolon oder `GO`.
 
 ![Animierte Demo. Tab ersetzt das Sternchen durch die drei Spalten von dbo.Buch. Die FROM-Zeile bleibt erhalten.](assets/select-tab.gif)
 

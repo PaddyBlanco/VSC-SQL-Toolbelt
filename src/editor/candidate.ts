@@ -1,4 +1,4 @@
-import { batchEnd, matchesDatabase } from "./databaseContext";
+import { batchEnd, databaseContext } from "./databaseContext";
 import { fromSources, sourceAt, type SqlSource } from "./sources";
 import { keyword, symbol, tokens, type Token } from "./tokens";
 
@@ -10,7 +10,7 @@ export interface ExecCandidate {
     kind: "exec"; start: number; end: number; targetEnd: number; source: SqlSource;
 }
 
-type Candidate = RelationCandidate | ExecCandidate;
+type Candidate = (RelationCandidate | ExecCandidate) & { database?: string };
 
 const statementStarts = new Set(["SELECT", "DECLARE", "SET", "USE", "PRINT", "EXEC", "EXECUTE", "INSERT", "UPDATE", "DELETE", "END"]);
 
@@ -21,13 +21,16 @@ function standaloneExec(before: Token[]) {
         !before.some(t => ["INSERT", "IF", "ELSE", "WHILE", "UNION"].includes(keyword(t)));
 }
 
-export function candidate(text: string, cursor: number, database?: string): Candidate | undefined {
+export function candidate(text: string, cursor: number): Candidate | undefined {
     if (text.length > 131072) return;
     const all = tokens(text);
-    if (!matchesDatabase(text, all, cursor, database)) return;
-    let start = 0;
+    const context = databaseContext(text, all, cursor);
+    if (!context) return;
+    const { database } = context;
+    let start = context.afterUse;
     let end = all.length;
-    for (let i = 0; i < all.length; i++) {
+    for (let i = start; i < all.length; i++) {
+        if (all[i].start > cursor && keyword(all[i]) === "USE") { end = i; break; }
         if (!symbol(all[i], ";") && !batchEnd(text, all[i])) continue;
         if (all[i].end <= cursor) start = i + 1;
         else { end = i; break; }
@@ -44,13 +47,13 @@ export function candidate(text: string, cursor: number, database?: string): Cand
             const semi = all[end];
             const replaceEnd = symbol(semi, ";") && /^[ \t]*$/.test(text.slice(cursor, semi.start)) ? semi.end : cursor;
             if (insert && keyword(ts[command + 1]) === "INTO" && item.index === ts.length) {
-                return { kind: "insert", start: targetEnd, end: replaceEnd, sources: [item.source], qualify: false };
+                return { kind: "insert", database, start: targetEnd, end: replaceEnd, sources: [item.source], qualify: false };
             }
             if (!insert && keyword(ts[command + 1]) !== "AS" && standaloneExec(ts.slice(0, command))) {
                 const next = ts[item.index];
                 const numbered = symbol(semi, ";") && !next && /^\d/.test(all[end + 1]?.text ?? "");
                 if (!numbered && (!next || (/[\r\n]/.test(text.slice(cursor, next.start)) && statementStarts.has(keyword(next))))) {
-                    return { kind: "exec", start: ts[command].start, end: replaceEnd, targetEnd, source: item.source };
+                    return { kind: "exec", database, start: ts[command].start, end: replaceEnd, targetEnd, source: item.source };
                 }
             }
         }
@@ -69,6 +72,6 @@ export function candidate(text: string, cursor: number, database?: string): Cand
     if (new Set(names).size !== names.length) return;
     const matches = qualified ? sources.filter((_, i) => names[i] === ts[head].text) : sources;
     if (!matches.length) return;
-    return { kind: "select", start: ts[head].start, end: ts[star].end, sources, qualify: qualified || sources.length > 1,
+    return { kind: "select", database, start: ts[head].start, end: ts[star].end, sources, qualify: qualified || sources.length > 1,
         only: qualified ? ts[head].text : undefined };
 }

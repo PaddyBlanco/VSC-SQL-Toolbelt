@@ -14,9 +14,9 @@ export async function prepare(store: Metadata, explicit = false) {
     const text = doc.getText();
     const position = editor.selection.active;
     const offset = doc.offsetAt(position);
-    const match = candidate(text, offset, store.db.name);
+    const match = candidate(text, offset);
     if (!match) {
-        if (explicit) throw new ToolkitError(`Cursor hinter *, INSERT INTO [Tabelle] oder EXEC [Prozedur] setzen. Ein vorausgehendes USE muss auf ${store.db.name} verweisen.`);
+        if (explicit) throw new ToolkitError("Cursor hinter *, INSERT INTO [Tabelle] oder EXEC [Prozedur] setzen. Ein vorausgehendes USE muss eindeutig sein.");
         return;
     }
     if (match.kind === "select" && match.sources.length > 16) throw new ToolkitError("Pro SELECT werden maximal 16 Quellen unterstützt.");
@@ -26,8 +26,8 @@ export async function prepare(store: Metadata, explicit = false) {
     const indent = editor.options.insertSpaces === false ? "\t" : " ".repeat(Number(editor.options.tabSize) || 4);
     const eol = doc.eol === vscode.EndOfLine.CRLF ? "\r\n" : "\n";
     const change = match.kind === "exec"
-        ? execReplacement(text, match, await store.parameters(auth.accessToken, match.source), indent, eol)
-        : replacement(text, match, await store.resolve(auth.accessToken, match.sources), indent, eol);
+        ? execReplacement(text, match, await store.parameters(auth.accessToken, match.source, match.database), indent, eol)
+        : replacement(text, match, await store.resolve(auth.accessToken, match.sources, match.database), indent, eol);
     return { editor, version, position, kind: match.kind, store, change, until: Date.now() + 30_000 };
 }
 

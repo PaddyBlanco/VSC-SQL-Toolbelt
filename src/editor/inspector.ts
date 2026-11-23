@@ -6,6 +6,7 @@ import { report } from "../mssql/session";
 import { ddlScript } from "../objektskripte/script";
 import { deliver } from "../objektskripte/destination";
 import { hoverTarget } from "./hoverTarget";
+import { withEditorDatabase } from "./metadata";
 import { inspectorPage } from "./inspectorPage";
 
 function showDetails(db: Database, api: SharedConnections, object: CatalogObject) {
@@ -70,7 +71,7 @@ export function registerInspector(context: vscode.ExtensionContext) {
                 const bound = binding;
                 if (!bound || vscode.window.activeTextEditor?.document !== document ||
                     document.offsetAt(document.lineAt(document.lineCount - 1).range.end) > 131072) return;
-                const target = hoverTarget(document.getText(), document.offsetAt(position), bound.db.name);
+                const target = hoverTarget(document.getText(), document.offsetAt(position));
                 if (!target) return;
                 const id = ++revision;
                 ticket = undefined;
@@ -84,14 +85,16 @@ export function registerInspector(context: vscode.ExtensionContext) {
                 try {
                     const auth = await vscode.authentication.getSession(api.authenticationProviderId, [], { silent: true });
                     if (!auth || cancellation.isCancellationRequested || !await connected(auth.accessToken)) return;
-                    const object = await withConnection(api, auth.accessToken, db, uri => resolveObject(api, auth.accessToken, uri, db, target.source));
+                    const { object, objectDb } = await withEditorDatabase(api, auth.accessToken, db, target.database, async (uri, objectDb) => ({
+                        object: await resolveObject(api, auth.accessToken, uri, objectDb, target.source), objectDb
+                    }));
                     if (!current() || cancellation.isCancellationRequested) return;
                     const key = crypto.randomUUID();
                     const expires = Date.now() + 60_000;
                     ticket = { key, open: async () => {
                         if (Date.now() > expires || !await connected(auth.accessToken)) return;
                         panel?.dispose();
-                        const next = showDetails(db, api, object);
+                        const next = showDetails(objectDb, api, object);
                         panel = next;
                         panelProvider = api.authenticationProviderId;
                         next.onDidDispose(() => { if (panel === next) { panel = undefined; panelProvider = undefined; } });

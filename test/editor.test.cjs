@@ -73,13 +73,13 @@ test("beide TAB-Positionen in SELECT d.*,* wählen genau eine Wildcard", () => {
 
 test("INSERT in einem SQL-Arbeitsblatt erkennt Klammern und horizontales Leerzeichen", () => {
     const sql = "USE [DemoDb];\r\nGO\r\nSELECT 1\r\nINSERT INTO [demo].[ExampleTable]  ";
-    const c = candidate(sql, sql.length, "DemoDb");
+    const c = candidate(sql, sql.length);
     assert.equal(c.kind, "insert");
     assert.equal(c.start, sql.lastIndexOf("]") + 1);
     assert.equal(c.sources[0].schema, "demo");
     assert.equal(c.sources[0].name, "ExampleTable");
-    assert.equal(candidate(sql, sql.length, "Other"), undefined);
-    assert.equal(candidate(sql + "VALUES (1)", sql.length, "DemoDb"), undefined);
+    assert.equal(c.database, "DemoDb");
+    assert.equal(candidate(sql + "VALUES (1)", sql.length), undefined);
 });
 
 test("UPDATE mit zusammengesetztem PK enthält beide Vergleiche", () => {
@@ -112,7 +112,7 @@ test("EXEC übernimmt die Signatur vom gebundenen Katalog und gibt nur OUTPUT-Pa
     };
     const sql = "USE [Demo];\r\nDECLARE @OrderId int;\r\n\texec [sales].[GetTotal];\r\nSELECT 1;";
     const pos = sql.indexOf("GetTotal]") + "GetTotal]".length;
-    const match = candidate(sql, pos, db.name);
+    const match = candidate(sql, pos);
     assert.equal(match.kind, "exec");
     assert.equal(match.source.schema, "sales");
     const metadata = new Metadata(api, db);
@@ -141,8 +141,8 @@ test("EXECUTE ohne Ausgabeparameter erzeugt Deklaration und Aufruf", () => {
 test("EXEC ergänzt nur einen eigenständigen, noch leeren Aufruf in der gebundenen Datenbank", () => {
     for (const sql of ["EXEC dbo.P @Id = 1", "EXEC dbo.P\n  @Id = 1", "EXEC dbo.P WITH RECOMPILE", "EXEC dbo.P;2",
         "EXEC dbo.P.Extra", "INSERT INTO dbo.T\nEXEC dbo.P", "IF 1=1\nEXEC dbo.P", "-- EXEC dbo.P",
-        "SELECT 'EXEC dbo.P'", "USE [Andere]; EXEC dbo.P"]) {
-        assert.equal(candidate(sql, sql.indexOf("dbo.P") + 5, "Demo"), undefined, sql);
+        "SELECT 'EXEC dbo.P'", "IF 1=1 USE [Andere]; EXEC dbo.P"]) {
+        assert.equal(candidate(sql, sql.indexOf("dbo.P") + 5), undefined, sql);
     }
     for (const sql of ["EXEC (@sql)", "EXEC @proc", "EXEC AS", "EXEC @rc = dbo.P"]) {
         assert.equal(candidate(sql, sql.length), undefined, sql);

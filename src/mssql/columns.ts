@@ -23,18 +23,19 @@ export function parameterizedType(c: Pick<Column, "type" | "bytes" | "precision"
 }
 
 // Encode names as UTF-16LE binary constants. Editor text cannot introduce SQL tokens.
-function nameValue(name: string) {
+export function nameLiteral(name: string) {
     if (!name.length || name.length > 128) throw new ToolkitError("Ungültige Länge des SQL-Bezeichners.");
     let hex = "";
     for (let i = 0; i < name.length; i++) {
         const unit = name.charCodeAt(i);
         hex += (unit & 255).toString(16).padStart(2, "0") + (unit >> 8).toString(16).padStart(2, "0");
     }
-    return "QUOTENAME(CONVERT(nvarchar(128), 0x" + hex + "))";
+    return "CONVERT(nvarchar(128), 0x" + hex + ")";
 }
 
 export function objectNameValue(source: Source) {
-    return [source.schema, source.name].filter((s): s is string => s !== undefined).map(nameValue).join(" + N'.' + ");
+    return [source.schema, source.name].filter((s): s is string => s !== undefined)
+        .map(name => "QUOTENAME(" + nameLiteral(name) + ")").join(" + N'.' + ");
 }
 
 export async function readRelation(api: SharedConnections, token: string, uri: string, db: Database, source: Source): Promise<Relation> {

@@ -4,7 +4,7 @@ const Module = require("node:module");
 
 test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ursprünglichen Profil", async () => {
     const db = { profile: "Demo A", name: "Katalog" };
-    const sql = "SELECT * FROM dbo.Buch";
+    const sql = "USE archiv\nSELECT * FROM dbo.Buch";
     const document = { version: 1, lineCount: 1, getText: () => sql, offsetAt: x => x, positionAt: x => x,
         lineAt: () => ({ range: { end: sql.length } }) };
     const editor = { document };
@@ -18,12 +18,13 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
     let panels = 0, profile = db.profile;
     const api = { authenticationProviderId: "fixture", onDidChangeActiveEditorConnection: event,
         getActiveEditorConnectionId: async () => profile, getActiveDatabase: async () => db.name,
-        connect: async (_, p, name) => { assert.equal(p, db.profile); assert.equal(name, db.name); return "temp"; },
+        connect: async (_, p, name) => { assert.equal(p, db.profile); assert.ok(["archiv", "Archiv"].includes(name)); return "temp"; },
         disconnect: async () => {}, executeSimpleQuery: async (_, uri, q) => {
             assert.equal(uri, "temp");
             let values;
-            if (q.startsWith("SELECT DB_NAME(), o.object_id")) values = [db.name, "12", "dbo", "Buch", "Table"];
-            else if (q.startsWith("SELECT DB_NAME(), SCHEMA_NAME")) values = [db.name, "dbo", "Buch"];
+            if (q.startsWith("SELECT DB_NAME() WHERE DB_ID()")) values = ["Archiv"];
+            else if (q.startsWith("SELECT DB_NAME(), o.object_id")) values = ["Archiv", "12", "dbo", "Buch", "Table"];
+            else if (q.startsWith("SELECT DB_NAME(), SCHEMA_NAME")) values = ["Archiv", "dbo", "Buch"];
             else { tabs.push(q); values = ["Test", "<Beispiel>"]; }
             return { rows: [values.map(displayValue => ({ displayValue }))] };
         }, scriptObject: async (_t, _u, operation) => { assert.equal(operation, 1); return "CREATE TABLE [dbo].[Buch](Id int);"; } };
@@ -71,6 +72,7 @@ test("Hover öffnet nur das aufgelöste Objekt und lädt jeden Tab auf seinem ur
         assert.equal(messages.at(-1).error, undefined);
     }
     assert.match(messages.at(-1).sql, /CREATE TABLE/);
+    assert.match(messages.at(-1).sql, /^USE \[Archiv\]/);
     assert.equal(tabs.length, 3);
     await receive({ action: "load", tab: "other", request: 10 });
     assert.equal(messages.length, 4);

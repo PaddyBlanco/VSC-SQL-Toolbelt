@@ -1,12 +1,14 @@
-import { batchEnd, matchesDatabase } from "./databaseContext";
+import { batchEnd, databaseContext } from "./databaseContext";
 import { sourceAt } from "./sources";
 import { keyword, symbol, tokens } from "./tokens";
 
-export function hoverTarget(text: string, offset: number, database: string) {
+export function hoverTarget(text: string, offset: number) {
     if (text.length > 131072) return;
     const all = tokens(text);
     const hit = all.findIndex(t => t.start <= offset && offset < t.end);
-    if (hit < 0 || all[hit].kind === "other" || !matchesDatabase(text, all, offset, database)) return;
+    if (hit < 0 || all[hit].kind === "other") return;
+    const context = databaseContext(text, all, offset);
+    if (!context) return;
     const start = symbol(all[hit - 1], ".") ? hit - 2 : hit;
     if (start < 0 || symbol(all[start - 1], ".") || symbol(all[start - 1], "@") || symbol(all[start - 1], "#")) return;
     const target = sourceAt(all, start, false);
@@ -20,5 +22,5 @@ export function hoverTarget(text: string, offset: number, database: string) {
         while (first && !symbol(all[first - 1], ";") && !batchEnd(text, all[first - 1])) first--;
         if (word === "UPDATE" || all.slice(first, start).some(t => keyword(t) === "WITH")) return;
     }
-    return { source: target.source, start: all[start].start, end: all[target.index - 1].end };
+    return { database: context.database, source: target.source, start: all[start].start, end: all[target.index - 1].end };
 }

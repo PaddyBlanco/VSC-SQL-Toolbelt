@@ -10,7 +10,7 @@ export function dml(relation: Relation, operation: Dml, indent = "    ", eol = "
     if (operation === "select") {
         const names = relation.columns.filter(c => !c.hidden).map(c => identifier(c.name));
         if (!names.length) throw new ToolkitError("Keine sichtbaren Spalten gefunden.");
-        return ["SELECT", indent + names.join("," + eol + indent), "FROM " + table + ";"].join(eol);
+        return ["SELECT TOP (1000)", indent + names.join("," + eol + indent), "FROM " + table + ";"].join(eol);
     }
     const writable = relation.columns.filter(c => c.writable);
     if (operation === "insert") {
